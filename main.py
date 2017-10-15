@@ -9,24 +9,28 @@ blacks = np.array([[False]*8]*6 + [[True]*8]*2)
 side = "w"
 
 while True:
+    input("enter when made move")
+
     newPos = recognition.recognise()[0 if side == "w" else 1]
     dif = newPos.astype('int') - (whites if side == "w" else blacks).astype('int')
     
+    intelligence.display(dif.astype("str"))
+
     moved    = np.argwhere(dif < 0)
     appeared = np.argwhere(dif > 0)
 
     if len(moved) > 1:
         print("more than one piece moved")
-        break
+        continue
     elif len(moved) < 1:
         print("no pieces moved!")
-        break
+        continue
     if len(appeared) > 1:
         print("more than one piece appeared?!")
-        break
+        continue
     elif len(appeared) < 1:
         print("no pieces appeared")
-        break
+        continue
 
     move = [moved[0], appeared[0]]
 
@@ -37,8 +41,10 @@ while True:
     else:
         blacks = newPos
 
-    side = "b" if side == "w" else "w"
-
     intelligence.display(state)
 
-    input("next move") 
+    print("\nmy move makes it:")
+
+    state = intelligence.makeMove(state, intelligence.bestMove(state, "b", 3))
+
+    intelligence.display(state)

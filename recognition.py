@@ -55,8 +55,8 @@ def recognise(display=False):
             b = topEdge  + ((y+1) * sqrSize) - sqrBorder
             edgeRoi = sbl[t:b, l:r] 
             threshRoi = np.logical_not(vision.threshold(blr, blackThreshold))[t:b, l:r]
-            edgeRois[y][x] = np.sum(edgeRoi)
-            threshRois[y][x] = np.sum(threshRoi)
+            edgeRois[y][7-x] = np.sum(edgeRoi)
+            threshRois[y][7-x] = np.sum(threshRoi)
             if display:
                 sbl[t:b,l:r] = 255
 
