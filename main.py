@@ -1,13 +1,14 @@
 import numpy as np
 import recognition, intelligence
 
-state = "RNBQKBNR/PPPPPPPP/        /        /        /        /pppppppp/rnbqkbnr/w/KQkg"
+state = [list(r) for r in "RNBQKBNR/PPPPPPPP/        /        /        /        /pppppppp/rnbqkbnr/KQkg".split("/")]
+
 whites = np.array([[True]*8]*2 + [[False]*8]*6)
 blacks = np.array([[False]*8]*6 + [[True]*8]*2)
 
 side = "w"
 
-while input("nothing to quit, something for next move"):
+while True:
     newPos = recognition.recognise()[0 if side == "w" else 1]
     dif = newPos.astype('int') - (whites if side == "w" else blacks).astype('int')
     
@@ -40,3 +41,4 @@ while input("nothing to quit, something for next move"):
 
     intelligence.display(state)
 
+    input("next move") 
