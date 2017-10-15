@@ -55,7 +55,7 @@ def evaluate(state, side):
                 score -= 5
             elif piece == "B" or piece == "N":
                 score += 3
-            elif piece == "b" or piece == "B":
+            elif piece == "b" or piece == "n":
                 score -= 3
             elif piece == "P":
                 score += 1
