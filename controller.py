@@ -1,5 +1,7 @@
 from tkinter import *
-import math, time
+import math, time, serial
+
+ser = serial.Serial("/dev/ttyUSB0", 9600)
 
 root = Tk()
 root.title("Robo Arm Controller")
@@ -37,21 +39,28 @@ s4y = 450
 
 
 while True:
-	canvas.delete("all")
-	
-	s3x = s4x + math.cos(math.radians(servo4.get())) * armLength1
-	s3y = s4y - math.sin(math.radians(servo4.get())) * armLength1
-	s2x = s3x + math.cos(math.radians(servo4.get() - (servo3.get() - 20))) * armLength2
-	s2y = s3y - math.sin(math.radians(servo4.get() - (servo3.get() - 20))) * armLength2
-	gx =  s2x + math.cos(math.radians(servo4.get() - (servo3.get() - 20) + (servo2.get() - 80))) * gripperLength
-	gy =  s2y - math.sin(math.radians(servo4.get() - (servo3.get() - 20) + (servo2.get() - 80))) * gripperLength
-	ax = s4x + math.cos(math.radians(servo5.get())) * (abs(90-servo5.get()) * 0.3 + 40)
-	ay = s4y + math.sin(math.radians(servo5.get())) * (abs(90-servo5.get()) * 0.3 + 40)
-	
-	colour = "#999"
-	
-	canvas.create_line(s4x,s4y,s3x,s3y,fill=colour, width=4, arrow="last")
-	canvas.create_line(s3x,s3y,s2x,s2y,fill=colour, width=4, arrow="last")
-	canvas.create_line(s2x,s2y,gx , gy, fill=colour, width=4, arrow="last")
-	canvas.create_line(s4x,s4y,ax , ay, fill="#777", width=4, arrow="last")
-	root.update()
+  canvas.delete("all")
+  
+  s3x = s4x + math.cos(math.radians(servo4.get())) * armLength1
+  s3y = s4y - math.sin(math.radians(servo4.get())) * armLength1
+  s2x = s3x + math.cos(math.radians(servo4.get() - (servo3.get() - 20))) * armLength2
+  s2y = s3y - math.sin(math.radians(servo4.get() - (servo3.get() - 20))) * armLength2
+  gx =  s2x + math.cos(math.radians(servo4.get() - (servo3.get() - 20) + (servo2.get() - 80))) * gripperLength
+  gy =  s2y - math.sin(math.radians(servo4.get() - (servo3.get() - 20) + (servo2.get() - 80))) * gripperLength
+  ax = s4x + math.cos(math.radians(180-servo5.get())) * (abs(90-servo5.get()) * 0.3 + 40)
+  ay = s4y + math.sin(math.radians(180-servo5.get())) * (abs(90-servo5.get()) * 0.3 + 40)
+  
+  colour = "#999"
+  
+  canvas.create_line(s4x,s4y,s3x,s3y,fill=colour, width=4, arrow="last")
+  canvas.create_line(s3x,s3y,s2x,s2y,fill=colour, width=4, arrow="last")
+  canvas.create_line(s2x,s2y,gx , gy, fill=colour, width=4, arrow="last")
+  canvas.create_line(s4x,s4y,ax , ay, fill="#777", width=4, arrow="last")
+  
+  #print(chr(servo2.get())+chr(servo3.get())+chr(servo4.get())+chr(servo5.get())+'\n')
+  #ser.write(bytes(chr(servo2.get())+chr(servo3.get())+chr(servo4.get())+chr(servo5.get())+'\n','utf8'))
+  
+  ser.write([servo2.get(),servo3.get(),servo4.get(),servo5.get(),10])  
+  time.sleep(0.05)
+  
+  root.update()
