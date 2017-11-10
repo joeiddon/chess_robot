@@ -1,11 +1,11 @@
 import math, serial, time
 
-ser = serial.Serial("/dev/ttyUSB1", 9600)
+ser = serial.Serial("/dev/ttyUSB0", 9600)
 
 armGrabbed = False
 armPos = [0, 20, 10]
 armSpd = 0.02
-armSteps = 30
+armSteps = 70
 
 def home():
     slideTo(0, 20, 10)
