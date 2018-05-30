@@ -4,11 +4,10 @@ ser = serial.Serial('/dev/ttyUSB0', 9600)
 
 #GENERAL
 home_pos = (0,20,10)
-cur_pos = home_pos
 grabbed = 0
 
 #TUNING
-deg_per_sec = 300  #degrees per second
+deg_per_sec = 100 #300  #degrees per second
 settle_time = 3 #time for mechanical wobble to stabilise
 
 #ROBOT ARM CONFIG
@@ -28,6 +27,7 @@ y_close = 9
 y_far   = 38
 z_piece = 2
 z_above = 10
+
 
 def test_piece_movement():
     move_piece((0,0),(7,0))
@@ -54,7 +54,7 @@ def piece_coordinate(x, y):
     return (-x_sides if not x else lerp(x/7,-x_sides,x_sides),
              y_close if not y else lerp(y/7,y_close,y_far))
 
-def move_to(c1, c2):
+def move_piece(c1, c2):
     c1, c2 = (piece_coordinate(*c) for c in (c1, c2))
     home()
     set_grabber(0)
@@ -97,37 +97,47 @@ def set_grabber(state):
     time.sleep(servo_grab_time)
     grabbed = state
 
-def move_to(x, y, z):
-    global servo_last_front, servo_last_back, servo_last_bottom
+
+def get_servo_angles(x, y, z):
     try:
         d = math.sqrt(x**2+y**2) - gripper_length
         A = math.acos((d**2+z**2) / (2*arm_lengths*(d**2+z**2)**0.5))
         Z = math.atan2(z,d)
         R = math.atan2(x,y)
-        print(math.degrees(R))
 
-        servo_next_front  = math.degrees(A+Z)
-        servo_next_back   = math.degrees(A-Z)
-        servo_next_bottom = math.degrees(R)+90
-
-        #servo_change_front  = servo_next_front  - servo_last_front
-        #servo_change_back   = servo_next_back   - servo_last_back
-        servo_change_bottom = servo_next_bottom - servo_last_bottom
-
-        #deceleration pulse 4 degrees before if change < 4
-        write_servos(servo_next_back, servo_next_front, servo_next_bottom + 5 * (-1 if servo_change_bottom < 0 else 1))
-        time.sleep(2)
-        write_servos(servo_next_back. servo_next_front, servo_next_bottom)
-
-        servo_last_front  = servo_next_front
-        servo_last_back   = servo_next_back
-        servo_last_bottom = servo_next_bottom
-
-
+        front  = math.degrees(A+Z)
+        back   = math.degrees(A-Z)
+        bottom = math.degrees(R)+90
     except ValueError:
         print('CALC_ERR: {},{},{}'.format(x,y,z))
         return 1
-    return 0
+    return (front,back,bottom)
+
+
+def move_to(x, y, z):
+    global servo_last_front, servo_last_back, servo_last_bottom
+
+    angles = get_servo_angles(x,y,z)
+    if not angles:
+        return
+
+    servo_next_front, servo_next_back, servo_next_bottom = angles
+
+    #servo_change_front  = servo_next_front  - servo_last_front
+    #servo_change_back   = servo_next_back   - servo_last_back
+    servo_change_bottom = servo_next_bottom - servo_last_bottom
+
+    #deceleration pulse 4 degrees before if change < 4
+    write_servos(servo_next_back, servo_next_front, servo_next_bottom + 10 * (1 if servo_change_bottom < 0 else -1))
+    time.sleep(abs(servo_change_bottom)/deg_per_sec)
+    print('finishing')
+    write_servos(servo_next_back, servo_next_front, servo_next_bottom)
+
+    servo_last_front  = servo_next_front
+    servo_last_back   = servo_next_back
+    servo_last_bottom = servo_next_bottom
+
+
 
 def write_servos(back, front, bottom):
     try:
@@ -146,5 +156,8 @@ def write_servos(back, front, bottom):
 
 def home():
     move_to(*home_pos)
+
+#SERVO HOME ANGLES
+servo_last_front, servo_last_back, servo_last_bottom = get_servo_angles(*home_pos)
 
 #atexit.register(home)
