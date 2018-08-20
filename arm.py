@@ -28,6 +28,9 @@ y_far   = 38
 z_piece = 2
 z_above = 10
 
+##################################################################################
+# consider moving chess piece logic (as opposed to kinematics) to different file #
+##################################################################################
 
 def test_piece_movement():
     move_piece((0,0),(7,0))
@@ -35,16 +38,16 @@ def test_piece_movement():
 
 def calibrate():
     home()
-    slide_to(*piece_coordinate(0,0),z_piece)
+    move_to(*piece_coordinate(0,0),z_piece)
     time.sleep(settle_time)
     home()
-    slide_to(*piece_coordinate(7,0),z_piece)
+    move_to(*piece_coordinate(7,0),z_piece)
     time.sleep(settle_time)
     home()
-    slide_to(*piece_coordinate(7,7),z_piece)
+    move_to(*piece_coordinate(7,7),z_piece)
     time.sleep(settle_time)
     home()
-    slide_to(*piece_coordinate(0,7),z_piece)
+    move_to(*piece_coordinate(0,7),z_piece)
     time.sleep(settle_time)
     home()
 
@@ -59,25 +62,25 @@ def move_piece(c1, c2):
     home()
     set_grabber(0)
     print('aligning with c1...')
-    slide_to(*c1, z_above)
+    move_to(*c1, z_above)
     time.sleep(settle_time)
     print('poised\npositioning for grab...')
-    slide_to(*c1, z_piece)
+    move_to(*c1, z_piece)
     print('ready to grab\ngrabbing...')
     set_grabber(1)
     print('grabbed\nescaping...')
-    slide_to(*c1, z_above)
+    move_to(*c1, z_above)
     print('escaped\ngoing home...')
     home()
     print('home\naligning with c2...')
-    slide_to(*c2, z_above)
+    move_to(*c2, z_above)
     time.sleep(settle_time)
     print('poised\npositioning for release...')
-    slide_to(*c2, z_piece)
+    move_to(*c2, z_piece)
     print('ready to release\nreleasing...')
     set_grabber(0)
     print('released\nescaping...')
-    slide_to(*c2, z_above)
+    move_to(*c2, z_above)
     print('escpaed\ngoing home...')
     home()
     print('move complete')
@@ -110,7 +113,7 @@ def get_servo_angles(x, y, z):
         bottom = math.degrees(R)+90
     except ValueError:
         print('CALC_ERR: {},{},{}'.format(x,y,z))
-        return 1
+        return 0
     return (front,back,bottom)
 
 
@@ -119,18 +122,21 @@ def move_to(x, y, z):
 
     angles = get_servo_angles(x,y,z)
     if not angles:
+        print('err again')
         return
 
     servo_next_front, servo_next_back, servo_next_bottom = angles
 
-    #servo_change_front  = servo_next_front  - servo_last_front
-    #servo_change_back   = servo_next_back   - servo_last_back
+    servo_change_front  = servo_next_front  - servo_last_front
+    servo_change_back   = servo_next_back   - servo_last_back
     servo_change_bottom = servo_next_bottom - servo_last_bottom
 
     #deceleration pulse 4 degrees before if change < 4
-    write_servos(servo_next_back, servo_next_front, servo_next_bottom + 10 * (1 if servo_change_bottom < 0 else -1))
-    time.sleep(abs(servo_change_bottom)/deg_per_sec)
-    print('finishing')
+    #write_servos(servo_next_back, servo_next_front, servo_next_bottom + 10 * (1 if servo_change_bottom < 0 else -1))
+    max_change = max(map(abs, [servo_change_front, servo_change_back, servo_change_bottom]))
+    time.sleep(max_change/deg_per_sec)
+    #print('finishing')
+
     write_servos(servo_next_back, servo_next_front, servo_next_bottom)
 
     servo_last_front  = servo_next_front

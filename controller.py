@@ -14,6 +14,7 @@ q | quit''')
 
 s=2 #step
 g=0 #grabber state
+p=arm.home_pos #current position
 
 def get_ch():
     fd = sys.stdin.fileno()
@@ -36,20 +37,20 @@ while 1:
          'z': [0,0,s],
          'x': [0,0,-s]}
     if c in d:
-        arm.slide_to(arm.cur_pos[0] + d[c][0],
-                     arm.cur_pos[1] + d[c][1],
-                     arm.cur_pos[2] + d[c][2])
+        p = tuple(p[i] + d[c][i] for i in range(3))
+        arm.move_to(*p)
     elif c=='e':
         g = not g
         arm.set_grabber(g)
     elif c=='h':
         arm.home()
+        p = arm.home_pos
     elif c=='c':
-        p = arm.cur_pos
+        print('chck')
         arm.home()
-        arm.slide_to(*p)
+        arm.move_to(*p)
     elif c=='q':
         arm.home()
         print()
         break
-    print(''.join(str(i).rjust(5) for i in arm.cur_pos)+' '*10,end='\r')
+    print(''.join(str(i).rjust(5) for i in p)+' '*10,end='\r')
