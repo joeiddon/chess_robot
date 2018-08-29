@@ -14,7 +14,7 @@ servoHoleDiameter = 3;           //diamter of holes for servo attachment
 servoHoleWidth = 10;             //width of short distance between hole so same side of servo
 servoHoleLength = 48;            //length of long distance between holes on either side of servo
 servoPadWidth = 18;              //width of servo pad
-servoPadLength = length;             //length of servo pad
+servoPadLength = length;         //length of servo pad
 servoPadHeight = 25;             //height of servo pad
 servoLength = 41;
 
@@ -53,33 +53,29 @@ module wall(){
    }  
 }
 
-difference(){
-   union(){
-      difference(){
-         union(){
-            wall();
-            translate([0, plateHoleLength, 0])
-            mirror([0,1,0])
-            wall();
-         }
-         translate([0, plateHoleLength/2 - servoPadWidth/2, servoPadHeight])
-         cube([servoPadLength, servoPadWidth, thickness]);
-      }
-      translate([0, plateHoleLength/2 - servoPadWidth/2, servoPadHeight])
-      servoPad();
-   }
-   translate([(length - servoLength) / 2 ,-0.5 * plateHoleLength, 0])
-   cube([servoLength, plateHoleLength*2, servoPadHeight * 2]);   
+module base(){
+    difference(){
+       union(){
+          difference(){
+             union(){
+                wall();
+                translate([0, plateHoleLength, 0])
+                mirror([0,1,0])
+                wall();
+             }
+             translate([0, plateHoleLength/2 - servoPadWidth/2, servoPadHeight])
+             cube([servoPadLength, servoPadWidth, thickness]);
+          }
+          translate([0, plateHoleLength/2 - servoPadWidth/2, servoPadHeight])
+          servoPad();
+       }
+       translate([(length - servoLength) / 2 ,-0.5 * plateHoleLength, 0])
+       cube([servoLength, plateHoleLength*2, servoPadHeight * 2]);   
+    }
+
+    foot();
+    translate([0, plateHoleLength, 0])
+    foot();
 }
 
-foot();
-translate([0, plateHoleLength, 0])
-foot();
-
-
-/*
-hull(){
-foot();
-translate([0, plateHoleLength/2 - servoPadWidth/2, servoPadHeight])
-servoPad();
-}
+base();
