@@ -1,3 +1,9 @@
+/*
+Simple javascript file to store the data of the arm stls.
+The stls were converted to the zengine.js format with:
+https://joeiddon.github.io/stl_viewer
+*/
+
 let color = {h: 0, s: 0, l: 100};
 let servo_color = {h: 10, s: 82, l: 58};
 let model = {
