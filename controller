@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import tty, sys, termios, arm
 
 print('''Controls:
@@ -26,6 +27,7 @@ def get_ch():
         termios.tcsetattr(fd, termios.TCSADRAIN, o_set)
     return ch
 
+arm.home()
 print('\n    x    y    z')
 while 1:
     c = get_ch()
@@ -46,7 +48,6 @@ while 1:
         arm.home()
         p = arm.home_pos
     elif c=='c':
-        print('chck')
         arm.home()
         arm.move_to(*p)
     elif c=='q':

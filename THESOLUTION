@@ -1,0 +1,3 @@
+the solution to the problem of the arm not travelling in straight lines is:
+
+the bottom rotate motor is not directly under the point of pivot of the front motor - the bottom rotation pivot is actually behind the front pivot. this means that it reaches further in the x-diretion (left and right) whent it is close (small y-coordinate) and reaches the right amount to the left and right when it is further away.
