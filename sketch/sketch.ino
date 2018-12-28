@@ -1,5 +1,9 @@
-//include library for servo contol
 #include <Servo.h>
+
+/*
+ Prerequisites:
+  - all distances are in *millimeters*
+*/
 
 //constants
 #define PI 3.141592
@@ -18,26 +22,30 @@
 #define SERVO_OFFSET_FRNT -230
 #define SERVO_OFFSET_BACK -520
 
-//grabber position in defrees
-#define SERVO_GRAB_POS_ON   154
-#define SERVO_GRAB_POS_OFF  140
+//grabber position in degrees <--------   TODO change to pulse widths !!!
+#define SERVO_GRAB_POS_ON   2211
+#define SERVO_GRAB_POS_OFF  2055
 
 //relevant dimensions of arm
-#define SEGMENT_LENGTH_1 20
-#define SEGMENT_LENGTH_2 20
-#define GRIPPER_HEIGHT   6  //missed this in the old version!
-#define GRIPPER_LENGTH   4
+#define SEGMENT_LENGTH_1 200
+#define SEGMENT_LENGTH_2 200
+#define GRIPPER_HEIGHT   60  //missed this in the old version!
+#define GRIPPER_LENGTH   40
 
 //stepper direction macros
 #define LEFT  1
 #define RIGHT 0
 
-//how far does the belt move per step? (in mm)
+//how far does the belt move per step?
 #define STEP_DIST 0.15798
 //delay in microseconds between each full step
 #define STEP_SPEED 800
 //full-half-quater-eigth--or-sixteenth-step
 #define STEP_MODE  16
+
+//servo home position:  d, z
+#define SERVO_HOME    150, 50
+
 /*
 ==Polulo A4988 Mode Selection==
   MS1 | MS2 | MS3 | Resolution
@@ -53,7 +61,7 @@
   First byte  | Message (type)  | NEBs | Enclosed bytes meaning
   0           | motor state     | 1    | (0/1 => disable/enable)
   1           | set grabber     | 1    | (0/1 => grab off/grab on
-  2           | move position   | 3    | (x: [0¬38], y: [10¬41], z: [-5¬20])
+  2           | move position   | 3    | (x: [0¬34, y: [10¬41], z: [-5¬20]) //need to be 6 NEBs, because now in mm !!!!!!
   Will return a standard success code: 0/1 indicating success/failure, respectively.
 */
 
@@ -63,15 +71,15 @@ Servo servo_frnt;
 Servo servo_grabber;
 
 //globals
-float x_pos;
+uint16_t x_pos;
 uint8_t serial_buffer[4];
 uint8_t *buf_pointer = &serial_buffer[0];
 
 void setup() {
-    //attach servo objects to their pins
+    //attach servo objects to their pins, setting end widths
     servo_back.attach(SERVO_BACK, 500, 2500);
     servo_frnt.attach(SERVO_FRNT, 500, 2500);
-    servo_grabber.attach(SERVO_GRABBER);
+    servo_grabber.attach(SERVO_GRABBER, 500, 2500);
     //set modes of all digital pins
     pinMode(STEPPER_ENABLE, OUTPUT);
     pinMode(STEPPER_DIR,    OUTPUT);
@@ -101,10 +109,13 @@ void loop() {
     }
     delay(1000);
     */
-    move_to(30, 15, 10);
-    move_to(0.1, 15, 10);
+    move_to(300, SERVO_HOME);
+    delay(200);
+    move_to(150, SERVO_HOME);
+    set_grabber(1);
     delay(1000);
-    move_to(0, 15, 10);
+    move_to(0, SERVO_HOME);
+    set_grabber(0);
     delay(1000);
 }
 
@@ -119,55 +130,61 @@ void handle_message(){
                 Serial.write(1); //message too long
             } break;
         case 1: //set grabber
-              //TODO: -write grabber function,
+              //TODO: write grabber function,
               //      -finish these types
         default:
             Serial.write(1); //unknown message type
     }
 }
 
-void move_to(float x, float y, float z){
-    //move to position (x,y,z) in cm
+void move_to(int16_t x, int16_t y, int16_t z){
+    //move to position (x,y,z)
     //x-axis is stepper
     //y-axis is horizontally perpendicular
-    //z-axis is clearly up therefore
+    //z-axis is, therefore, up
     //right-haned co-ordinate system
 
     //enable motors, in case not already
     enable_motors();
     //servos
-    float angles[2];
-    get_servo_angles(y, z, angles);
-    //write angles: offset, map to pulse widths whilst fixing direction
-    servo_back.writeMicroseconds(2500 - angles[0] * (2000 / PI) + SERVO_OFFSET_BACK);
-    servo_frnt.writeMicroseconds(2500 - angles[1] * (2000 / PI) + SERVO_OFFSET_FRNT);
+    move_servos(y, z);
     //step stepper to x postition - needs
-    for (int i = 0; i < abs(x_pos - x) / STEP_DIST * 10 * STEP_MODE; i++){
+    for (int i = 0; i < (x < x_pos ? x_pos - x : x - x_pos) / STEP_DIST * STEP_MODE; i++){
         step_stepper(x < x_pos ? LEFT : RIGHT);
         delayMicroseconds(STEP_SPEED / STEP_MODE);
     }
     x_pos = x;
 }
 
-//remember to do 180 - these 
-void get_servo_angles(float d, float z, float angles_out[2]) {
+void move_servos(int16_t d, int16_t z){
+    //[modulised as used when homing too]
+    float angles[2];
+    get_servo_angles(d, z, angles);
+    //write angles: offset, map to pulse widths whilst fixing direction
+    servo_back.writeMicroseconds(2500 - angles[0] * (2000 / PI) + SERVO_OFFSET_BACK);
+    servo_frnt.writeMicroseconds(2500 - angles[1] * (2000 / PI) + SERVO_OFFSET_FRNT);
+}
+
+void get_servo_angles(int16_t d, int16_t z, float angles_out[2]) {
     //d is horizontal distance of gripper from base
     //z is veritcal distance (height) of gripper from base
     //servo angles => angles_out = [back_angle, front_angle] in radians
     //see image in repo for calculations reference (meaning of letters)
-    z += GRIPPER_HEIGHT;
-    d -= GRIPPER_LENGTH;
+    z += GRIPPER_HEIGHT; //need to go higher as gripper has height
+    d -= GRIPPER_LENGTH; //don't need to go as far as gripper has length
     float Z = atan2(z, d);
-    float A = acos((sq(SEGMENT_LENGTH_1) + sq(d) + sq(z) - sq(SEGMENT_LENGTH_2)) /
-                   (2 * SEGMENT_LENGTH_1 * sqrt(sq(d) + sq(z))));
-    float B = acos((sq(SEGMENT_LENGTH_2) + sq(d) + sq(z) - sq(SEGMENT_LENGTH_1)) /
-                   (2 * SEGMENT_LENGTH_2 * sqrt(sq(d) + sq(z))));
+    float A = acos((sq(SEGMENT_LENGTH_1) + sq((int32_t)d) + sq((int32_t)z) - sq(SEGMENT_LENGTH_2)) /
+                   (2 * SEGMENT_LENGTH_1 * sqrt(sq((int32_t)d) + sq((int32_t)z))));
+    float B = acos((sq(SEGMENT_LENGTH_2) + sq((int32_t)d) + sq((int32_t)z) - sq(SEGMENT_LENGTH_1)) /
+                   (2 * SEGMENT_LENGTH_2 * sqrt(sq((int32_t)d) + sq((int32_t)z))));
     angles_out[0] = B - Z;
     angles_out[1] = A + Z;
 }
 
 void go_home(){
     enable_motors();
+    move_servos(SERVO_HOME);
+    set_grabber(0);
     while (!digitalRead(ENDSTOP)){
         step_stepper(LEFT);
         delayMicroseconds(STEP_SPEED / STEP_MODE);
@@ -175,7 +192,7 @@ void go_home(){
     x_pos = 0;
 }
 
-void step_stepper(boolean dir){
+void step_stepper(uint8_t dir){
     digitalWrite(STEPPER_DIR, dir);
     digitalWrite(STEPPER_STEP, LOW);
     digitalWrite(STEPPER_STEP, HIGH);
@@ -206,4 +223,9 @@ void disable_motors(){
 void go_offset_calibration(){
     servo_frnt.writeMicroseconds(1500 + SERVO_OFFSET_FRNT);
     servo_back.writeMicroseconds(2500 + SERVO_OFFSET_BACK);
+}
+
+void set_grabber(uint8_t state){
+    //state is 1/0 indicating grab on/grab off
+    servo_grabber.writeMicroseconds(state ? SERVO_GRAB_POS_ON : SERVO_GRAB_POS_OFF);
 }
