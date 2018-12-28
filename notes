@@ -1,0 +1,4 @@
+changed gripper length to length_offset so can use to modify the pivot hole (THESOLUTION).
+tuning with calibrate() function by having 4 pawns in the corners of the board
+problem with the height (z-axis) when get further away
+this means adjusting z_above is difficult
