@@ -199,17 +199,11 @@ void step_stepper(uint8_t dir){
 }
 
 void enable_motors(){
-    if (!servo_back.attached())    servo_back.attach(SERVO_BACK);
-    if (!servo_frnt.attached())    servo_frnt.attach(SERVO_FRNT);
-    if (!servo_grabber.attached()) servo_grabber.attach(SERVO_GRABBER);
     digitalWrite(SERVOS_ENABLE,  HIGH);
     digitalWrite(STEPPER_ENABLE, LOW);
 }
 
 void disable_motors(){
-    if (servo_back.attached())    servo_back.detach(SERVO_BACK);
-    if (servo_frnt.attached())    servo_frnt.detach(SERVO_FRNT);
-    if (servo_grabber.attached()) servo_grabber.detach(SERVO_GRABBER);
     digitalWrite(SERVOS_ENABLE,  LOW);
     digitalWrite(STEPPER_ENABLE, HIGH);
 }
