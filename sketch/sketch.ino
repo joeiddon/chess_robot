@@ -24,7 +24,6 @@
 
 //grabber position in pulse widths
 #define SERVO_GRAB_POS_ON   2190
-//
 #define SERVO_GRAB_POS_OFF  1970
 
 //relevant dimensions of arm
@@ -38,20 +37,25 @@
 //stepper direction macros
 #define LEFT  1
 #define RIGHT 0
-
+//full-half-quater-eigth-or-sixteenth-step
+#define STEP_MODE 16
 //how far does the belt move per step?
 #define STEP_DIST 0.15798
-//delay in microseconds between each full step
-#define STEP_SPEED 1300
-//full-half-quater-eigth--or-sixteenth-step
-#define STEP_MODE  16
+//speeds are delays in microseconds between each full step
+#define MAX_STEP_SPEED 1200
+#define MIN_STEP_SPEED 2200
+//acceleration and deceleration will take this many millimeters
+#define ACCEL_AND_DECELERATION_DIST  100
+//number of sub-steps for acceleration and deceleration
+#define NUM_ACCEL_OR_DECEL_STEPS ACCEL_AND_DECELERATION_DIST / STEP_DIST * STEP_MODE
 
+//predefined arm positions
 //servo home position:  d, z
 #define SERVO_HOME    150, 50
 
 //serial
 #define BUF_LENGTH 7
-#define INT_FROM_BYTES(A, B) (int16_t) ((A)<<8)+(B)
+#define INT_FROM_BYTES(A, B) (uint16_t) ((A)<<8)+(B)
 
 /*
 ==Polulo A4988 Mode Selection==
@@ -85,13 +89,14 @@ Servo servo_frnt;
 Servo servo_grabber;
 
 //x current and target postions are steps (or sub-steps) from home.
-//uint16_t big enough as 400 * STEP_DIST * 16 < 65536 (max)
+//uint16_t big enough as max x / STEP_DIST * 16 < 65536 (max)
 uint16_t x_pos;
 uint16_t x_target;
+uint16_t pulses_since_accel_start;
 
 //timings for pulses (us == microseconds)
 uint32_t last_pulse_us; //initialised in go_home();
-uint32_t pulse_interval_us = STEP_SPEED / STEP_MODE;
+uint16_t  pulse_interval_us;
 
 //serial
 uint8_t serial_buffer[BUF_LENGTH];
@@ -115,6 +120,8 @@ void setup() {
     //connect to our master
     Serial.begin(9600);
 
+    disable_motors();
+    delay(1000);
     go_home();
 }
 
@@ -137,18 +144,37 @@ void loop() {
     }
     //if not at stepper target and due to pulse, let's pulse
     if (x_pos != x_target && (micros() - last_pulse_us) >= pulse_interval_us){
-        digitalWrite(13, HIGH);
+        if (!counter++){
+            Serial.print(0); Serial.print(" "); Serial.print(300); Serial.print(" ");
+            Serial.println(pulse_interval_us);
+        }
+        //make it look like we pulsed at the right time
         last_pulse_us += pulse_interval_us;
+        //pulse the motor
         step_stepper(x_pos < x_target ? RIGHT : LEFT);
+        //adjust pulse_interval_us accordin to if decelerating or accelerating
+        uint16_t steps_from_target = x_pos < x_target ? x_target - x_pos : x_pos - x_target;
+        if (x_target != 0 && steps_from_target < NUM_ACCEL_OR_DECEL_STEPS){
+            //decelerating
+            pulse_interval_us = (uint16_t) map(steps_from_target,
+                                               0, NUM_ACCEL_OR_DECEL_STEPS,
+                                               MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+        } else if (pulses_since_accel_start < NUM_ACCEL_OR_DECEL_STEPS){
+            //accelerating
+            pulses_since_accel_start++;
+            pulse_interval_us = (uint16_t) map(pulses_since_accel_start,
+                                               0, NUM_ACCEL_OR_DECEL_STEPS,
+                                               MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+        }
         //if going home, we listen for endstop instead of blindly moving :)
-        if (x_target == 0){ 
+        if (x_target == 0){
             if (digitalRead(ENDSTOP)){
                 x_pos = 0;
            }
         } else {
             x_pos += x_pos < x_target ? 1 : -1;
        }
-    } else {digitalWrite(13, LOW);}
+    }
 }
 
 void handle_message(){
@@ -187,7 +213,7 @@ void handle_message(){
     }
 }
 
-void move_to(int16_t x, int16_t y, int16_t z){
+void move_to(uint16_t x, uint16_t y, uint16_t z){
     //move to position (x,y,z)
     //right-handed co-ordinate system, orientated:
     // - x-axis is stepper; measured from home
@@ -201,9 +227,10 @@ void move_to(int16_t x, int16_t y, int16_t z){
     x_target = x / STEP_DIST * STEP_MODE;
     //need to pretend we just pulsed so timeings re-baised from here
     last_pulse_us = micros();
+    pulses_since_accel_start = 0;
 }
 
-void move_servos(int16_t d, int16_t z){
+void move_servos(uint16_t d, uint16_t z){
     //[modulised as used when homing too]
     //moves the front and back servos to their correct angles
     //see get_servo_angles for meaning of parameters
@@ -214,7 +241,7 @@ void move_servos(int16_t d, int16_t z){
     servo_frnt.writeMicroseconds(2500 - angles[1] * (2000 / PI) + SERVO_OFFSET_FRNT);
 }
 
-void get_servo_angles(int16_t d, int16_t z, float angles_out[2]) {
+void get_servo_angles(uint16_t d, uint16_t z, float angles_out[2]) {
     //d is horizontal distance of gripper from base
     //z is veritcal distance (height) of gripper from base
     //servo angles => angles_out = [back_angle, front_angle] in radians
@@ -239,6 +266,7 @@ void go_home(){
     x_pos = 1;    //tricks pulsing code into moving
     x_target = 0; //special case in pulsing code
     last_pulse_us = micros();
+    pulses_since_accel_start = 0;
 }
 
 void step_stepper(uint8_t dir){
