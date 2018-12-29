@@ -1,0 +1,5 @@
+#ignore python binaries
+__pycache__
+
+#ignore all swp files
+**/*.swp
