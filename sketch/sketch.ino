@@ -47,7 +47,7 @@
 //acceleration and deceleration will take this many millimeters
 #define ACCEL_AND_DECELERATION_DIST  100
 //number of sub-steps for acceleration and deceleration
-#define NUM_ACCEL_OR_DECEL_STEPS ACCEL_AND_DECELERATION_DIST / STEP_DIST * STEP_MODE
+#define NUM_ACCEL_OR_DECEL_STEPS (ACCEL_AND_DECELERATION_DIST / STEP_DIST * STEP_MODE)
 
 //predefined arm positions
 //servo home position:  d, z
@@ -156,15 +156,13 @@ void loop() {
         uint16_t steps_from_target = x_pos < x_target ? x_target - x_pos : x_pos - x_target;
         if (x_target != 0 && steps_from_target < NUM_ACCEL_OR_DECEL_STEPS){
             //decelerating
-            pulse_interval_us = (uint16_t) map(steps_from_target,
-                                               0, NUM_ACCEL_OR_DECEL_STEPS,
-                                               MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+            pulse_interval_us = (uint16_t)linear_interp(steps_from_target / NUM_ACCEL_OR_DECEL_STEPS,
+                                                        MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
         } else if (pulses_since_accel_start < NUM_ACCEL_OR_DECEL_STEPS){
             //accelerating
             pulses_since_accel_start++;
-            pulse_interval_us = (uint16_t) map(pulses_since_accel_start,
-                                               0, NUM_ACCEL_OR_DECEL_STEPS,
-                                               MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+            pulse_interval_us = (uint16_t)linear_interp(pulses_since_accel_start / NUM_ACCEL_OR_DECEL_STEPS,
+                                                        MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
         }
         //if going home, we listen for endstop instead of blindly moving :)
         if (x_target == 0){
@@ -175,6 +173,10 @@ void loop() {
             x_pos += x_pos < x_target ? 1 : -1;
        }
     }
+}
+
+int16_t linear_interp(float x, int16_t a, int16_t b){
+    return a + x * (b - a);
 }
 
 void handle_message(){
