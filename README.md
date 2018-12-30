@@ -12,4 +12,4 @@ File|Purpose
 
 See some videos of the arm in progress here:
 
-[200~https://photos.app.goo.gl/uKwEp8JHDU8QnPrb8
+https://photos.app.goo.gl/uKwEp8JHDU8QnPrb8
