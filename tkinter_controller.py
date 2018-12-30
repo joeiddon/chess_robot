@@ -2,14 +2,16 @@ from tkinter import *
 import time, serial, glob
 
 #NOTE: this code is *not* very readable; it was
-#      just a quick hack to test the positioning
+#      just a quick hack to test the positioning,
+#      should handle arduino responses, but instead
+#      just prints them
 #
 #   if want to run in background:
 #   echo '/dev/ttyUSB0' | python tkinter_controller.py > /dev/null 2>&1 &
 
 ser_ports = glob.glob('/dev/ttyUSB*')
 print(f'possile serial directories: {ser_ports}')
-s = serial.Serial(input('serial dir: ') if len(ser_ports) == 0 or len(ser_ports) > 1 else ser_ports[0])
+s = serial.Serial(input('serial dir: ') if len(ser_ports) == 0 or len(ser_ports) > 1 else ser_ports[0], 115200)
 
 root = Tk()
 root.title('Robo Arm Controller')
