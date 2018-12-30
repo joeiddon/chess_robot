@@ -2,3 +2,7 @@ changed gripper length to length_offset so can use to modify the pivot hole (THE
 tuning with calibrate() function by having 4 pawns in the corners of the board
 problem with the height (z-axis) when get further away
 this means adjusting z_above is difficult
+---
+comptete arm re-design, now using a track for the x-axis instead of a base rotate servo
+stepper control working - see: https://arduino.stackexchange.com/questions/60163/how-can-i-pulse-a-stepper-motor-whilst-also-wanting-to-handle-other-tasks
+stepper acceleration control working with array to store pulse widths
