@@ -17,6 +17,7 @@
   1   | 1   | 1   | Sixteenth
 
 ==Joe's Serial Protocol==
+  Runs at a baud rate of 115200 pulses per second.
   First byte is message type; last byte is a full terminater byte (0xff).
   The number of enclosed bytes (NEBs) is dependent on the message type.
   First byte  | Message (type)  | NEBs | Enclosed bytes meaning
@@ -26,16 +27,20 @@
   3           | move position   | 6    | (x: [0¬340, y: [100¬410], z: [0¬200])
                                           ^          ^             ^
        these uint16s (actually casted to signed) are sent *little-endian* (see INT_FROM_BYTES)
-  Will reply with a standard success code: 0/1 indicating success/failure, respectively.
+
+  Arduino will reply with a one byte code after every message.
+  Value       | Meaning
+  0           | Task completed as expected
+  1           | x_pos has reached x_target - useful for timings
+  2           | Invalid request structure (wrong NEBs)
+  3           | Task failed due to invalid input ranges
+  4           | Unkown request type
 
 ==Debugging Random Stepper Movements==
  -check STEP_SPEED
  -check motors are enabled (enable_motors called before x_pos set)
 
 */
-
-//constants
-#define PI 3.141592
 
 //pin definitions
 #define STEPPER_ENABLE 2
@@ -71,10 +76,10 @@
 //how far does the belt move per step?
 #define STEP_DIST 0.15798
 //speeds are delays in microseconds between each full step
-#define MAX_STEP_SPEED 1200
-#define MIN_STEP_SPEED 3000  //<<< keep this low, accel_pulse_us array only bytes
+#define MAX_STEP_SPEED 1000
+#define MIN_STEP_SPEED 2800  //<<< keep this low, accel_pulse_us array only bytes
 //acceleration and deceleration will take this many millimeters
-#define ACCEL_AND_DECELERATION_DIST  20
+#define ACCEL_AND_DECELERATION_DIST  15
 
 //number of sub-steps for acceleration and deceleration
 #define NUM_ACCEL_OR_DECEL_STEPS (uint16_t) (ACCEL_AND_DECELERATION_DIST / STEP_DIST * STEP_MODE)
@@ -89,6 +94,11 @@
 //serial
 #define BUF_LENGTH 7
 #define INT_FROM_BYTES(A, B) (int16_t) ((A)<<8)+(B)
+#define CODE_NORMAL           0
+#define CODE_X_TARGET_REACHED 1
+#define CODE_INVALID_NEBS     2
+#define CODE_INVALID_INPUT    3
+#define CODE_INVALID_TYPE     4
 
 //initialise servo objects
 Servo servo_back;
@@ -116,6 +126,7 @@ uint8_t serial_buffer[BUF_LENGTH];
 uint8_t buf_pointer = 0;
 
 //experimental/debug variables
+#define DEBUG_MODE 0
 uint16_t counter = 0;
 
 void setup() {
@@ -132,11 +143,7 @@ void setup() {
     //debug LED
     pinMode(13, OUTPUT);
     //connect to our master
-    Serial.begin(9600);
-
-    //just so have time to move away from home, will remove
-    disable_motors();
-    delay(1000);
+    Serial.begin(115200);
 
     for (uint16_t i = 0; i < NUM_ACCEL_OR_DECEL_STEPS / STEP_MODE + 1; i++){
         accel_pulse_us[i] = smootherstep_interp((float) i / (NUM_ACCEL_OR_DECEL_STEPS / STEP_MODE),
@@ -159,13 +166,13 @@ void loop() {
                 serial_buffer[buf_pointer++] = b;
             } else {
                 buf_pointer = 0;  //reset buf_pointer to start
-                Serial.write(1); //message too long
+                Serial.write(CODE_INVALID_NEBS); //message too long
             }
         }
     }
     //if not at stepper target and due to pulse, let's pulse
     if (x_pos != x_target && (micros() - last_pulse_us) >= pulse_interval_us){
-        if (!(counter++ & 0xfff)){
+        if (DEBUG_MODE && !(counter++ & 0xff)){
             Serial.print(0); Serial.print(" "); Serial.print(300); Serial.print(" ");
             Serial.println(pulse_interval_us);
         }
@@ -176,9 +183,14 @@ void loop() {
 
         //adjust pulse_interval_us according to if decelerating or accelerating
         uint16_t steps_from_target = x_pos < x_target ? x_target - x_pos : x_pos - x_target;
-        if (x_target != 0 && steps_from_target < NUM_ACCEL_OR_DECEL_STEPS){
+        if (x_target == 0){
+            pulse_interval_us = MIN_STEP_SPEED / STEP_MODE;
+        } else if (steps_from_target < NUM_ACCEL_OR_DECEL_STEPS){
             //decelerating
+            if (steps_from_target < pulses_since_accel_start)
             pulse_interval_us = accel_pulse_us[steps_from_target / STEP_MODE];
+            else
+            pulse_interval_us = MIN_STEP_SPEED / STEP_MODE;
         } else if (pulses_since_accel_start < NUM_ACCEL_OR_DECEL_STEPS){
             //accelerating
             pulse_interval_us = accel_pulse_us[pulses_since_accel_start++ / STEP_MODE];
@@ -187,15 +199,20 @@ void loop() {
         if (x_target == 0){
             if (digitalRead(ENDSTOP)){
                 x_pos = 0;
+                Serial.write(CODE_X_TARGET_REACHED);
+                //this is just so that the arm doesn't wait on the endstop as it is drying
+                x_target = 500;
            }
         } else {
             x_pos += x_pos < x_target ? 1 : -1;
+            if (x_pos == x_target)
+            Serial.write(CODE_X_TARGET_REACHED);
        }
     }
 }
 
 //these interpolation functions are for smoothing the acceleration
-
+//only one is actually used to populate the accel_pulse_us array
 uint16_t linear_interp(float x, int16_t a, int16_t b){
     //basic linear, x in range [0¬1]
     return a + x * (b - a);
@@ -219,24 +236,24 @@ void handle_message(){
         case 0: //home
             if (buf_pointer == 1){
                 go_home();
-                Serial.write(0);
+                Serial.write(CODE_NORMAL);
             } else {
-                Serial.write(1);
+                Serial.write(CODE_INVALID_NEBS);
             } break;
         case 1: //set motors
             if (buf_pointer == 2){
                 if (serial_buffer[1]) enable_motors();
                 else disable_motors();
-                Serial.write(0);
+                Serial.write(CODE_NORMAL);
             } else {
-                Serial.write(1); //message too long
+                Serial.write(CODE_INVALID_NEBS);
             } break;
         case 2: //set grabber
             if (buf_pointer == 2){
                 set_grabber(serial_buffer[1]);
-                Serial.write(0);
+                Serial.write(CODE_NORMAL);
             } else {
-                Serial.write(1);
+                Serial.write(CODE_INVALID_NEBS);
             } break;
         case 3: //move to
             if (buf_pointer == 7){
@@ -245,20 +262,21 @@ void handle_message(){
                         z = INT_FROM_BYTES(serial_buffer[5], serial_buffer[6]);
                 if (X_IN_RANGE(x) && Y_IN_RANGE(y) && Z_IN_RANGE(z)){
                     move_to(x,y,z);
-                    Serial.write(0);
+                    Serial.write(CODE_NORMAL);
+                } else {
+                    Serial.write(CODE_INVALID_INPUT);
                 }
-                else Serial.write(1);
             } else {
-                Serial.write(1);
+                Serial.write(CODE_INVALID_NEBS);
             } break;
         default:
-            Serial.write(1); //unknown message type
+            Serial.write(CODE_INVALID_TYPE);
             break;
     }
 }
 
 void move_to(int16_t x, int16_t y, int16_t z){
-    //move to position (x,y,z)
+    //move to position (x,y,z), limits are described by the *_IN_RANGE(*) macros
     //right-handed co-ordinate system, orientated:
     // - x-axis is stepper; measured from home
     // - y-axis is horizontally perpendicular towards the gripper; measured from servo pivots
@@ -295,9 +313,9 @@ void get_servo_angles(int16_t d, int16_t z, float angles_out[2]) {
     z -= PIVOT_HEIGHT;   //don't need to go as high as servo pivots already in air
     d -= GRIPPER_LENGTH; //don't need to go as far as gripper has length
     float Z = atan2(z, d);
-    float A = acos((sq(SEGMENT_LENGTH_1) + sq((int32_t)d) + sq((int32_t)z) - sq(SEGMENT_LENGTH_2)) /
+    float A = acos((sq((int32_t)SEGMENT_LENGTH_1) + sq((int32_t)d) + sq((int32_t)z) - sq((int32_t)SEGMENT_LENGTH_2)) /
                    (2 * SEGMENT_LENGTH_1 * sqrt(sq((int32_t)d) + sq((int32_t)z))));
-    float B = acos((sq(SEGMENT_LENGTH_2) + sq((int32_t)d) + sq((int32_t)z) - sq(SEGMENT_LENGTH_1)) /
+    float B = acos((sq((int32_t)SEGMENT_LENGTH_2) + sq((int32_t)d) + sq((int32_t)z) - sq((int32_t)SEGMENT_LENGTH_1)) /
                    (2 * SEGMENT_LENGTH_2 * sqrt(sq((int32_t)d) + sq((int32_t)z))));
     angles_out[0] = B - Z;
     angles_out[1] = A + Z;
