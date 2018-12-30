@@ -162,11 +162,11 @@ void loop() {
         if (x_target != 0 && steps_from_target < NUM_ACCEL_OR_DECEL_STEPS){
             //decelerating
             pulse_interval_us = linear_interp(steps_from_target / NUM_ACCEL_OR_DECEL_STEPS,
-                                                    MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+                                              MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
         } else if (pulses_since_accel_start < NUM_ACCEL_OR_DECEL_STEPS){
             //accelerating
             pulse_interval_us = linear_interp(pulses_since_accel_start++ / NUM_ACCEL_OR_DECEL_STEPS,
-                                                    MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+                                              MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
         }
         //if going home, we listen for endstop instead of blindly moving :)
         if (x_target == 0){
@@ -210,7 +210,6 @@ uint16_t smootherstep_interp(float x, int16_t a, int16_t b){
     // ^~142us to complete! too slow to calculate on fly
     return calc;
 }
-
 
 void handle_message(){
     switch (serial_buffer[0]){
