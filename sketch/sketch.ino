@@ -3,7 +3,35 @@
 /*
  Prerequisites:
   - all distances are in *millimeters*
-  TODO: right better
+
+  TODO:
+    - right better explanation for program here
+    - add checks to move_to assert the inputs are valid
+ 
+==Polulo A4988 Mode Selection==
+  MS1 | MS2 | MS3 | Resolution
+  0   | 0   | 0   | Full
+  1   | 0   | 0   | Half
+  0   | 1   | 0   | Quarter
+  1   | 1   | 0   | Eighth
+  1   | 1   | 1   | Sixteenth
+
+==Joe's Serial Protocol==
+  First byte is message type; last byte is a full terminater byte (0xff).
+  The number of enclosed bytes (NEBs) is dependent on the message type.
+  First byte  | Message (type)  | NEBs | Enclosed bytes meaning
+  0           | home            | 0    | N/A
+  1           | motor state     | 1    | (0/1 => disable/enable)
+  2           | set grabber     | 1    | (0/1 => grab off/grab on
+  3           | move position   | 6    | (x: [0¬340, y: [100¬410], z: [0¬200])
+                                          ^          ^             ^
+       these uint16s (actually casted to signed) are sent *little-endian* (see INT_FROM_BYTES)
+  Will reply with a standard success code: 0/1 indicating success/failure, respectively.
+
+==Debugging Random Stepper Movements==
+ -check STEP_SPEED
+ -check motors are enabled (enable_motors called before x_pos set)
+
 */
 
 //constants
@@ -43,46 +71,24 @@
 //how far does the belt move per step?
 #define STEP_DIST 0.15798
 //speeds are delays in microseconds between each full step
-#define MAX_STEP_SPEED 1400
-#define MIN_STEP_SPEED 2200
+#define MAX_STEP_SPEED 1200
+#define MIN_STEP_SPEED 3000  //<<< keep this low, accel_pulse_us array only bytes
 //acceleration and deceleration will take this many millimeters
-#define ACCEL_AND_DECELERATION_DIST  10
+#define ACCEL_AND_DECELERATION_DIST  20
+
 //number of sub-steps for acceleration and deceleration
-#define NUM_ACCEL_OR_DECEL_STEPS (ACCEL_AND_DECELERATION_DIST / STEP_DIST * STEP_MODE)
+#define NUM_ACCEL_OR_DECEL_STEPS (uint16_t) (ACCEL_AND_DECELERATION_DIST / STEP_DIST * STEP_MODE)
 
 //predefined arm positions
 //servo home position:  d, z
 #define SERVO_HOME    150, 50
+#define X_IN_RANGE(x)   0<=(x) && (x)<=340
+#define Y_IN_RANGE(y) 100<=(y) && (y)<=410
+#define Z_IN_RANGE(z)   0<=(z) && (z)<=200
 
 //serial
 #define BUF_LENGTH 7
-#define INT_FROM_BYTES(A, B) (uint16_t) ((A)<<8)+(B)
-
-/*
-==Polulo A4988 Mode Selection==
-  MS1 | MS2 | MS3 | Resolution
-  0   | 0   | 0   | Full
-  1   | 0   | 0   | Half
-  0   | 1   | 0   | Quarter
-  1   | 1   | 0   | Eighth
-  1   | 1   | 1   | Sixteenth
-
-==Joe's Serial Protocol==
-  First byte is message type; last byte is a full terminater byte (0xff).
-  The number of enclosed bytes (NEBs) is dependent on the message type.
-  First byte  | Message (type)  | NEBs | Enclosed bytes meaning
-  0           | home            | 0    | N/A
-  1           | motor state     | 1    | (0/1 => disable/enable)
-  2           | set grabber     | 1    | (0/1 => grab off/grab on
-  3           | move position   | 6    | (x: [0¬340, y: [100¬410], z: [0¬200])
-                                          ^          ^             ^
-                         these uint16s are sent *little-endian* (see INT_FROM_BYTES)
-  Will return a standard success code: 0/1 indicating success/failure, respectively.
-
-==Debugging Random Stepper Movements==
- -check STEP_SPEED
- -check motors are enabled (enable_motors called before x_pos set)
-*/
+#define INT_FROM_BYTES(A, B) (int16_t) ((A)<<8)+(B)
 
 //initialise servo objects
 Servo servo_back;
@@ -93,7 +99,13 @@ Servo servo_grabber;
 //uint16_t big enough as max x / STEP_DIST * 16 < 65536 (max)
 uint16_t x_pos;
 uint16_t x_target;
+
+//set to 0 every time we move so we know when to stop accelerating
 uint16_t pulses_since_accel_start;
+//array to store accel/decel pulse lengths as they take too long
+//to calculate on the fly, so computed in setup() and stored
+uint8_t  accel_pulse_us[NUM_ACCEL_OR_DECEL_STEPS / STEP_MODE + 1];
+//^ only single bytes, so don't go for crazy large pulses as will overflow!
 
 //timings for pulses (us == microseconds)
 uint32_t last_pulse_us; //initialised in go_home();
@@ -103,7 +115,7 @@ uint16_t pulse_interval_us;
 uint8_t serial_buffer[BUF_LENGTH];
 uint8_t buf_pointer = 0;
 
-//playing variables
+//experimental/debug variables
 uint16_t counter = 0;
 
 void setup() {
@@ -125,6 +137,11 @@ void setup() {
     //just so have time to move away from home, will remove
     disable_motors();
     delay(1000);
+
+    for (uint16_t i = 0; i < NUM_ACCEL_OR_DECEL_STEPS / STEP_MODE + 1; i++){
+        accel_pulse_us[i] = smootherstep_interp((float) i / (NUM_ACCEL_OR_DECEL_STEPS / STEP_MODE),
+                                          MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+    }
 
     go_home();
 }
@@ -148,9 +165,9 @@ void loop() {
     }
     //if not at stepper target and due to pulse, let's pulse
     if (x_pos != x_target && (micros() - last_pulse_us) >= pulse_interval_us){
-        if (!(counter++ & 0)){
-//            Serial.print(0); Serial.print(" "); Serial.print(300); Serial.print(" ");
-  //          Serial.println(pulse_interval_us);
+        if (!(counter++ & 0xfff)){
+            Serial.print(0); Serial.print(" "); Serial.print(300); Serial.print(" ");
+            Serial.println(pulse_interval_us);
         }
         //make it look like we pulsed at the right time
         last_pulse_us += pulse_interval_us;
@@ -161,12 +178,10 @@ void loop() {
         uint16_t steps_from_target = x_pos < x_target ? x_target - x_pos : x_pos - x_target;
         if (x_target != 0 && steps_from_target < NUM_ACCEL_OR_DECEL_STEPS){
             //decelerating
-            pulse_interval_us = linear_interp(steps_from_target / NUM_ACCEL_OR_DECEL_STEPS,
-                                              MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+            pulse_interval_us = accel_pulse_us[steps_from_target / STEP_MODE];
         } else if (pulses_since_accel_start < NUM_ACCEL_OR_DECEL_STEPS){
             //accelerating
-            pulse_interval_us = linear_interp(pulses_since_accel_start++ / NUM_ACCEL_OR_DECEL_STEPS,
-                                              MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+            pulse_interval_us = accel_pulse_us[pulses_since_accel_start++ / STEP_MODE];
         }
         //if going home, we listen for endstop instead of blindly moving :)
         if (x_target == 0){
@@ -182,33 +197,21 @@ void loop() {
 //these interpolation functions are for smoothing the acceleration
 
 uint16_t linear_interp(float x, int16_t a, int16_t b){
-    uint32_t start = micros();
-    uint16_t calc = a + x * (b - a);
-    uint32_t fin = micros();
-    Serial.println(fin - start);
+    //basic linear, x in range [0¬1]
+    return a + x * (b - a);
     // ^ ~20us so fast enough to calculate on fly
-    return calc;
 }
 
 uint16_t smoothstep_interp(float x, int16_t a, int16_t b){
-    if (x < 0 || x > 1) Serial.println("!!! invalid x");
     //3x^2 - 2x*3
-    uint32_t start = micros();
-    uint16_t calc = a + (3*x*x - 2*x*x*x) * (b - a);
-    uint32_t fin = micros();
-    Serial.println(fin - start);
+    return a + (3*x*x - 2*x*x*x) * (b - a);
     // ^ ~80us to complete! too slow to calculate on fly
-    return calc;
 }
 
 uint16_t smootherstep_interp(float x, int16_t a, int16_t b){
     //6x^5 - 15x^4 + 10x^3
-    uint32_t start = micros();
-    uint16_t calc =  a + (6*x*x*x*x*x - 15*x*x*x*x + 10*x*x*x) * (b - a);
-    uint32_t fin = micros();
-    Serial.println(fin - start);
+    return  a + (6*x*x*x*x*x - 15*x*x*x*x + 10*x*x*x) * (b - a);
     // ^~142us to complete! too slow to calculate on fly
-    return calc;
 }
 
 void handle_message(){
@@ -216,6 +219,7 @@ void handle_message(){
         case 0: //home
             if (buf_pointer == 1){
                 go_home();
+                Serial.write(0);
             } else {
                 Serial.write(1);
             } break;
@@ -230,14 +234,20 @@ void handle_message(){
         case 2: //set grabber
             if (buf_pointer == 2){
                 set_grabber(serial_buffer[1]);
+                Serial.write(0);
             } else {
                 Serial.write(1);
             } break;
         case 3: //move to
             if (buf_pointer == 7){
-                move_to(INT_FROM_BYTES(serial_buffer[1], serial_buffer[2]),
-                        INT_FROM_BYTES(serial_buffer[3], serial_buffer[4]),
-                        INT_FROM_BYTES(serial_buffer[5], serial_buffer[6]));
+                int16_t x = INT_FROM_BYTES(serial_buffer[1], serial_buffer[2]),
+                        y = INT_FROM_BYTES(serial_buffer[3], serial_buffer[4]),
+                        z = INT_FROM_BYTES(serial_buffer[5], serial_buffer[6]);
+                if (X_IN_RANGE(x) && Y_IN_RANGE(y) && Z_IN_RANGE(z)){
+                    move_to(x,y,z);
+                    Serial.write(0);
+                }
+                else Serial.write(1);
             } else {
                 Serial.write(1);
             } break;
@@ -247,7 +257,7 @@ void handle_message(){
     }
 }
 
-void move_to(uint16_t x, uint16_t y, uint16_t z){
+void move_to(int16_t x, int16_t y, int16_t z){
     //move to position (x,y,z)
     //right-handed co-ordinate system, orientated:
     // - x-axis is stepper; measured from home
@@ -264,7 +274,7 @@ void move_to(uint16_t x, uint16_t y, uint16_t z){
     pulses_since_accel_start = 0;
 }
 
-void move_servos(uint16_t d, uint16_t z){
+void move_servos(int16_t d, int16_t z){
     //[modulised as used when homing too]
     //moves the front and back servos to their correct angles
     //see get_servo_angles for meaning of parameters
@@ -275,11 +285,12 @@ void move_servos(uint16_t d, uint16_t z){
     servo_frnt.writeMicroseconds(2500 - angles[1] * (2000 / PI) + SERVO_OFFSET_FRNT);
 }
 
-void get_servo_angles(uint16_t d, uint16_t z, float angles_out[2]) {
+void get_servo_angles(int16_t d, int16_t z, float angles_out[2]) {
     //d is horizontal distance of gripper from base
     //z is veritcal distance (height) of gripper from base
     //servo angles => angles_out = [back_angle, front_angle] in radians
     //see image in repo for calculations reference (meaning of letters)
+    d -= GRIPPER_LENGTH; //don't need to go as far as gripper has length
     z += GRIPPER_HEIGHT; //need to go higher as gripper has height
     z -= PIVOT_HEIGHT;   //don't need to go as high as servo pivots already in air
     d -= GRIPPER_LENGTH; //don't need to go as far as gripper has length
