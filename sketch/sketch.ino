@@ -3,6 +3,7 @@
 /*
  Prerequisites:
   - all distances are in *millimeters*
+  TODO: right better
 */
 
 //constants
@@ -42,10 +43,10 @@
 //how far does the belt move per step?
 #define STEP_DIST 0.15798
 //speeds are delays in microseconds between each full step
-#define MAX_STEP_SPEED 1200
+#define MAX_STEP_SPEED 1400
 #define MIN_STEP_SPEED 2200
 //acceleration and deceleration will take this many millimeters
-#define ACCEL_AND_DECELERATION_DIST  100
+#define ACCEL_AND_DECELERATION_DIST  10
 //number of sub-steps for acceleration and deceleration
 #define NUM_ACCEL_OR_DECEL_STEPS (ACCEL_AND_DECELERATION_DIST / STEP_DIST * STEP_MODE)
 
@@ -96,13 +97,14 @@ uint16_t pulses_since_accel_start;
 
 //timings for pulses (us == microseconds)
 uint32_t last_pulse_us; //initialised in go_home();
-uint16_t  pulse_interval_us;
+uint16_t pulse_interval_us;
 
 //serial
 uint8_t serial_buffer[BUF_LENGTH];
 uint8_t buf_pointer = 0;
 
-uint8_t counter = 0;
+//playing variables
+uint16_t counter = 0;
 
 void setup() {
     //attach servo objects to their pins, setting end widths
@@ -120,8 +122,10 @@ void setup() {
     //connect to our master
     Serial.begin(9600);
 
+    //just so have time to move away from home, will remove
     disable_motors();
     delay(1000);
+
     go_home();
 }
 
@@ -144,25 +148,25 @@ void loop() {
     }
     //if not at stepper target and due to pulse, let's pulse
     if (x_pos != x_target && (micros() - last_pulse_us) >= pulse_interval_us){
-        if (!counter++){
-            Serial.print(0); Serial.print(" "); Serial.print(300); Serial.print(" ");
-            Serial.println(pulse_interval_us);
+        if (!(counter++ & 0)){
+//            Serial.print(0); Serial.print(" "); Serial.print(300); Serial.print(" ");
+  //          Serial.println(pulse_interval_us);
         }
         //make it look like we pulsed at the right time
         last_pulse_us += pulse_interval_us;
         //pulse the motor
         step_stepper(x_pos < x_target ? RIGHT : LEFT);
-        //adjust pulse_interval_us accordin to if decelerating or accelerating
+
+        //adjust pulse_interval_us according to if decelerating or accelerating
         uint16_t steps_from_target = x_pos < x_target ? x_target - x_pos : x_pos - x_target;
         if (x_target != 0 && steps_from_target < NUM_ACCEL_OR_DECEL_STEPS){
             //decelerating
             pulse_interval_us = linear_interp(steps_from_target / NUM_ACCEL_OR_DECEL_STEPS,
-                                                        MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+                                                    MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
         } else if (pulses_since_accel_start < NUM_ACCEL_OR_DECEL_STEPS){
             //accelerating
-            pulses_since_accel_start++;
-            pulse_interval_us = linear_interp(pulses_since_accel_start / NUM_ACCEL_OR_DECEL_STEPS,
-                                                        MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
+            pulse_interval_us = linear_interp(pulses_since_accel_start++ / NUM_ACCEL_OR_DECEL_STEPS,
+                                                    MIN_STEP_SPEED, MAX_STEP_SPEED) / STEP_MODE;
         }
         //if going home, we listen for endstop instead of blindly moving :)
         if (x_target == 0){
@@ -175,9 +179,38 @@ void loop() {
     }
 }
 
+//these interpolation functions are for smoothing the acceleration
+
 uint16_t linear_interp(float x, int16_t a, int16_t b){
-    return a + x * (b - a);
+    uint32_t start = micros();
+    uint16_t calc = a + x * (b - a);
+    uint32_t fin = micros();
+    Serial.println(fin - start);
+    // ^ ~20us so fast enough to calculate on fly
+    return calc;
 }
+
+uint16_t smoothstep_interp(float x, int16_t a, int16_t b){
+    if (x < 0 || x > 1) Serial.println("!!! invalid x");
+    //3x^2 - 2x*3
+    uint32_t start = micros();
+    uint16_t calc = a + (3*x*x - 2*x*x*x) * (b - a);
+    uint32_t fin = micros();
+    Serial.println(fin - start);
+    // ^ ~80us to complete! too slow to calculate on fly
+    return calc;
+}
+
+uint16_t smootherstep_interp(float x, int16_t a, int16_t b){
+    //6x^5 - 15x^4 + 10x^3
+    uint32_t start = micros();
+    uint16_t calc =  a + (6*x*x*x*x*x - 15*x*x*x*x + 10*x*x*x) * (b - a);
+    uint32_t fin = micros();
+    Serial.println(fin - start);
+    // ^~142us to complete! too slow to calculate on fly
+    return calc;
+}
+
 
 void handle_message(){
     switch (serial_buffer[0]){
