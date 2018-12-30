@@ -18,7 +18,7 @@ root.title('Robo Arm Controller')
 
 x_max = 340
 y_min = 100
-y_max = 410
+y_max = 450
 z_min = 0
 z_max = 200
 

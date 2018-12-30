@@ -24,7 +24,7 @@
   0           | home            | 0    | N/A
   1           | motor state     | 1    | (0/1 => disable/enable)
   2           | set grabber     | 1    | (0/1 => grab off/grab on
-  3           | move position   | 6    | (x: [0¬340, y: [100¬410], z: [0¬200])
+  3           | move position   | 6    | (x: [0¬340, y: [100¬450], z: [0¬200])
                                           ^          ^             ^
        these uint16s (actually casted to signed) are sent *little-endian* (see INT_FROM_BYTES)
 
@@ -88,7 +88,7 @@
 //servo home position:  d, z
 #define SERVO_HOME    150, 50
 #define X_IN_RANGE(x)   0<=(x) && (x)<=340
-#define Y_IN_RANGE(y) 100<=(y) && (y)<=410
+#define Y_IN_RANGE(y) 100<=(y) && (y)<=450
 #define Z_IN_RANGE(z)   0<=(z) && (z)<=200
 
 //serial
@@ -235,8 +235,8 @@ void handle_message(){
     switch (serial_buffer[0]){
         case 0: //home
             if (buf_pointer == 1){
-                go_home();
                 Serial.write(CODE_NORMAL);
+                go_home();
             } else {
                 Serial.write(CODE_INVALID_NEBS);
             } break;
@@ -250,8 +250,8 @@ void handle_message(){
             } break;
         case 2: //set grabber
             if (buf_pointer == 2){
-                set_grabber(serial_buffer[1]);
                 Serial.write(CODE_NORMAL);
+                set_grabber(serial_buffer[1]);
             } else {
                 Serial.write(CODE_INVALID_NEBS);
             } break;
@@ -261,8 +261,8 @@ void handle_message(){
                         y = INT_FROM_BYTES(serial_buffer[3], serial_buffer[4]),
                         z = INT_FROM_BYTES(serial_buffer[5], serial_buffer[6]);
                 if (X_IN_RANGE(x) && Y_IN_RANGE(y) && Z_IN_RANGE(z)){
-                    move_to(x,y,z);
                     Serial.write(CODE_NORMAL);
+                    move_to(x,y,z);
                 } else {
                     Serial.write(CODE_INVALID_INPUT);
                 }
@@ -287,6 +287,8 @@ void move_to(int16_t x, int16_t y, int16_t z){
     move_servos(y, z);
     //convert x coordinate in mm to steps, and set as target
     x_target = x / STEP_DIST * STEP_MODE;
+    //if already there, send appropriate reply
+    if (x_pos == x_target) Serial.write(CODE_X_TARGET_REACHED);
     //need to pretend we just pulsed so timeings re-baised from here
     last_pulse_us = micros();
     pulses_since_accel_start = 0;

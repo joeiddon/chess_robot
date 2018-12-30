@@ -11,7 +11,7 @@ import serial, os.path
   0           | home            | 0    | N/A
   1           | motor state     | 1    | (0/1 => disable/enable)
   2           | set grabber     | 1    | (0/1 => grab off/grab on
-  3           | move position   | 6    | (x: [0¬340, y: [100¬410], z: [0¬200])
+  3           | move position   | 6    | (x: [0¬340, y: [100¬450], z: [0¬200])
                                           ^          ^             ^
        these uint16s (actually casted to signed) are sent *little-endian* (see INT_FROM_BYTES)
 
@@ -25,7 +25,7 @@ import serial, os.path
 """
 
 LIMITS = {'x': (0, 340),
-          'y': (100, 410),
+          'y': (100, 450),
           'z': (0, 200)}
 
 class Arm():
@@ -55,6 +55,8 @@ class Arm():
                 LIMITS['y'][0] <= y <= LIMITS['y'][1] and \
                 LIMITS['z'][0] <= z <= LIMITS['z'][1]):
             raise ValueError(f'Position [{x},{y},{z}] out of limits.')
+        if not (type(x) == type(y) == type(z) == int):
+            raise TypeError('Parameters: x,y,z must be integers!')
         self._write_and_check_success([3,
                                        *self._bytes_from_int(x),
                                        *self._bytes_from_int(y),
@@ -62,7 +64,6 @@ class Arm():
                                        0xff])
     def block_till_reach_target(self):
         '''Waits till x_pos reaches next x_target. Blocking.'''
-        self._flush_serial()
         r = self.serial.read()[0]
         if r != 1:
             raise Exception(f'Arduino return code != 1: {r}')
