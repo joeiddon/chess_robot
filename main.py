@@ -2,10 +2,10 @@ import arm_lib, glob, time
 
 #positions of chess board
 X_SIDES = 130
-Y_CLOSE = 110
-Y_FAR   = 420
+Y_CLOSE = 140
+Y_FAR   = 415
 Z_PIECE =  10
-Z_ABOVE =  90
+Z_ABOVE =  105
 
 #position to go to between moves
 MOVE_POS = (int(arm_lib.LIMITS['x'][1]/2),
@@ -46,8 +46,6 @@ def move_piece(c1, c2):
     time.sleep(SETTLE_TIME)
     arm.move_to(c1[0], *MOVE_POS[1:])
     time.sleep(SETTLE_TIME)
-    arm.move_to(*MOVE_POS)
-    arm.block_till_reach_target()
     arm.move_to(c2[0], *MOVE_POS[1:])
     arm.block_till_reach_target()
     arm.move_to(*c2, Z_ABOVE);
