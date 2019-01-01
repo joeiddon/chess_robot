@@ -3,3 +3,6 @@ __pycache__
 
 #ignore all swp files
 **/*.swp
+
+#ignore the chess_ai binary
+intelligence/chess_ai
