@@ -7,3 +7,4 @@ add images of dimensions, electronics etc.
 explain history of project in README
 print chess set
 auto disable motors after set time limit
+add titles to all files in nice /****/ notation

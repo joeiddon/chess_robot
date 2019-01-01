@@ -31,7 +31,7 @@ The program can then be run with: `./chess_ai`.
 
 ---
 
-### Code Explanation (my notes!):
+### Code Explanation:
 
 There are two main types (structures): `state_t` and `move_t` used throughout the code. (I appended the `_t` to make distinguish them from variable names).
 
