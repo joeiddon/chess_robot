@@ -1,6 +1,8 @@
 #ifndef CORE_H
 #define CORE_H
 
+//TODO: implement macro GET_PIECE(r,c) => state->pieces[(r)][(c)]
+
 //piece values
 #define PAWN_VAL   (100)
 #define ROOK_VAL   (500)
@@ -10,6 +12,9 @@
 
 //max score for check mates and stalemates
 #define INFINITY (32767)
+
+//points per centre square
+#define CENTRE_POWER (40)
 
 //checks coordinate lies on board
 #define ON_BOARD(x,y) ((x)>=0&&(x)<8&&(y)>=0&&(y)<8)
@@ -51,6 +56,6 @@ uint8_t is_checkmated(state_t *state, int8_t side);
 uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array);
 void add_move(state_t *state, move_t *moves_array, uint8_t *moves, move_t move, uint8_t side);
 int16_t evaluate(state_t *state);
-int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth);
+int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, int16_t alpha, int16_t beta);
 
 #endif

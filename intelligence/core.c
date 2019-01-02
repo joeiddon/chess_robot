@@ -5,10 +5,15 @@
 #include "core.h"
 #include "helpers.h"
 
+//special piece moves
 const int8_t horse_moves[8][2] = {{1,2},{-1,2},{1,-2},{-1,-2},{2,1},{-2,1},{2,-1},{-2,-1}};
 const int8_t king_moves[8][2] = {{0,1},{0,-1},{1,0},{-1,0},{1,1},{-1,1},{1,-1},{-1,-1}};
 
-int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth){
+//advantage given to occupation of these in evaluate
+const uint8_t centre_squares[4][2] = {{3,3},{3,4},{4,3},{4,4}};
+
+int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, int16_t alpha, int16_t beta){
+    //alpha should be initialised to -INFINITY; beta to INFINITY
     //returns best score and sets best_move to the best_move
     #ifdef DEBUG_NEGAMAX
     printf("~~~~~SPAWNED at depth: %d~~~~~\n", depth);
@@ -20,12 +25,15 @@ int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth){
     uint8_t num_moves = generate_moves(state, side, moves);
     for (uint8_t i = 0; i < num_moves; i++){
         make_move(state, moves+i);
-        int16_t score = -negamax(state, NULL, -side, depth-1);
+        int16_t score = -negamax(state, NULL, -side, depth-1, -beta, -alpha);
         inverse_move(state, moves+i);
         if (score > best_score){
             best_score = score;
             if (best_move != NULL) *best_move = moves[i];
         }
+        if (best_score > alpha) alpha = best_score;
+        if (alpha >= beta) { //prune tree as we have found a score we can be sure of achieving better than their best score
+        /*printf("branching factor: %d\n", i);*/return alpha;}
     }
     return best_score;
 }
@@ -36,6 +44,7 @@ int16_t evaluate(state_t *state){
     if (is_checkmated(state, BLACK)) return  INFINITY;
     if (is_checkmated(state, WHITE)) return -INFINITY;
     int16_t score = 0;
+    //material
     for (uint8_t i = 0; i < 8; i++){
         for (uint8_t j = 0; j < 8; j++){
             switch (state->pieces[i][j]){
@@ -53,6 +62,11 @@ int16_t evaluate(state_t *state){
             }
         }
     }
+    //centre squares
+    for (uint8_t i = 0; i < 4; i ++)
+    score += state->pieces[centre_squares[i][0]][centre_squares[i][1]] > 0 ? CENTRE_POWER : \
+             state->pieces[centre_squares[i][0]][centre_squares[i][1]] < 0 ? -CENTRE_POWER : 0;
+
     return score;
 }
 
@@ -107,7 +121,6 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array){
     //moves_array is a pointer to an array where the moves will be stored
     //returns the number of moves added to the array,
     //if moves_array is NULL, will just return the number of moves
-    //TODO: castling
     uint8_t num_moves = 0;
     int8_t cc,rr;
     for (uint8_t r = 0; r < 8; r++){

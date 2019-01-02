@@ -101,7 +101,7 @@ void print_negamax_route(state_t *state, int8_t side, uint8_t depth){
     move_t move_route[depth];
     printf("analysing negamax's evaluation of the following state, for %s\n", side==WHITE?"white":"black");
     print_state(state);
-    int16_t end_score = negamax(state, move_route, side, depth);
+    int16_t end_score = negamax(state, move_route, side, depth, -INFINITY, INFINITY);
     printf("best eval for %s found, after searching to depth %d, was: %d\n", side==WHITE?"white":"black", depth, end_score);
     printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
     printf("Negamax expects the following moves from now:\n");
@@ -115,7 +115,7 @@ void print_negamax_route(state_t *state, int8_t side, uint8_t depth){
     while (d > 0){
         //switch perspectives
         side *= -1;
-        negamax(state, move_pointer, side, d--);
+        negamax(state, move_pointer, side, d--, -INFINITY, INFINITY);
         //make the move
         make_move(state, move_pointer);
         print_move(move_pointer);

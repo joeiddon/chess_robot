@@ -53,18 +53,14 @@ void main(){
     printf("black is checkmated? %s\n", is_checkmated(&state, BLACK) ? "yes" : "no");
     */
 
-    /*
-    printf("evaluation for white: %d\n",  evaluate(&state));
-    printf("evaluation for black: %d\n", -evaluate(&state));
-    */
+    //printf("evaluation for white: %d\n",  evaluate(&state));
+    //printf("evaluation for black: %d\n", -evaluate(&state));
 
-    /*
     move_t best_move;
-    int16_t end_score = negamax(&state, &best_move, WHITE, 3);
+    int16_t end_score = negamax(&state, &best_move, WHITE, 5, -INFINITY, INFINITY);
     printf("best move for white:\n");
     print_move(&best_move);
     printf("yielding an eventual evaluation of: %d\n", end_score);
-    */
 
-    print_negamax_route(&state, WHITE, 3);
+    //print_negamax_route(&state, WHITE, 7);
 }
