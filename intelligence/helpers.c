@@ -6,6 +6,8 @@
 #include "helpers.h"
 
 static char piece_chars[7] = {' ','p','r','n','b','q','k'};
+static char *state_invalid_castles_words[4] = {"white kingside","white queenside",\
+                                               "black kingside","black queenside"};
 
 void print_state(state_t *state){
     //white pieces are uppper case, black pieces lower case
@@ -21,7 +23,12 @@ void print_state(state_t *state){
         }
         printf("\n------------------\n");
     }
-    printf(" |0|1|2|3|4|5|6|7|\n");
+    printf(" |0|1|2|3|4|5|6|7|\nallowed castle moves:\n");
+    for (uint8_t i = 0; i < 4; i++){
+        if (!GET_BIT(state->invalid_castles,i+1)){
+            printf("- %s\n", state_invalid_castles_words[i]);
+        }
+    }
 }
 
 
@@ -36,11 +43,11 @@ void make_move(state_t *state, move_t *move){
     if (move->castle){
         //special case: castling (note: move->from must target the right kind for side)
         //move king...
-        state->pieces[side==WHITE?0:7][move->castle==KINGSIDE?6:2] = side*KING;
-        state->pieces[side==WHITE?0:7][4] = 0;
+        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?6:2] = side*KING;
+        state->pieces[BACK_ROW(side)][4] = 0;
         //move castle...
-        state->pieces[side==WHITE?0:7][move->castle==KINGSIDE?5:3] = side*ROOK;
-        state->pieces[side==WHITE?0:7][move->castle==KINGSIDE?7:0] = 0;
+        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?5:3] = side*ROOK;
+        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?7:0] = 0;
     } else if (move->is_pawn_promotion){
         //special case: pawn promotion (auto to queen :)
         state->pieces[MOVE_TO] = side*QUEEN;
@@ -50,6 +57,12 @@ void make_move(state_t *state, move_t *move){
         state->pieces[MOVE_TO] = state->pieces[MOVE_FROM];
         state->pieces[MOVE_FROM] = 0;
     }
+    if (move->makes_castle_invalid){
+        if (move->from[1]==7 || move->from[1]==4)
+        SET_BIT_HIGH(state->invalid_castles,KINGSIDE_BIT(side));
+        if (move->from[1]==0 || move->from[1]==4)
+        SET_BIT_HIGH(state->invalid_castles,QUEENSIDE_BIT(side));
+    }
 }
 
 void inverse_move(state_t *state, move_t *move){
@@ -58,11 +71,11 @@ void inverse_move(state_t *state, move_t *move){
     if (move->castle){
         //special case: castling
         //move king...
-        state->pieces[side==WHITE?0:7][move->castle==KINGSIDE?6:2] = 0;
-        state->pieces[side==WHITE?0:7][4] = side*KING;
+        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?6:2] = 0;
+        state->pieces[BACK_ROW(side)][4] = side*KING;
         //move castle...
-        state->pieces[side==WHITE?0:7][move->castle==KINGSIDE?5:3] = 0;
-        state->pieces[side==WHITE?0:7][move->castle==KINGSIDE?7:0] = side*ROOK;
+        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?5:3] = 0;
+        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?7:0] = side*ROOK;
     } else if (move->is_pawn_promotion){
         //special case: pawn promotion (auto to queen :)
         state->pieces[MOVE_TO] = state->last_taken;
@@ -72,5 +85,10 @@ void inverse_move(state_t *state, move_t *move){
         state->pieces[MOVE_FROM] = state->pieces[MOVE_TO];
         state->pieces[MOVE_TO] = state->last_taken;
     }
-
+    if (move->makes_castle_invalid){
+        if (move->from[1]==7 || move->from[1]==4)
+        SET_BIT_LOW(state->invalid_castles,KINGSIDE_BIT(side));
+        if (move->from[1]==0 || move->from[1]==4)
+        SET_BIT_LOW(state->invalid_castles,QUEENSIDE_BIT(side));
+    }
 }

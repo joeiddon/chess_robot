@@ -94,42 +94,55 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array){
             if (IS_MINE(r,c))
             switch (ABS(state->pieces[r][c])){
                 case PAWN:
-                    if (ON_BOARD(r+side,c)&&state->pieces[r+side][c]==0){
-                        CALL_ADD_MOVE(r+side,c,IS_END_ROW(r+side,side));
-                        if(r==(side==WHITE?1:6)&&state->pieces[r+2*side][c]==0) //double move
-                        CALL_ADD_MOVE(r+2*side,c,0);
+                    if (ON_BOARD(r+side,c)&&IS_EMPTY(r+side,c)){
+                        CALL_ADD_MOVE(r+side,c,IS_END_ROW(r+side,side),0,0);
+                        if(r==(side==WHITE?1:6)&&IS_EMPTY(r+2*side,c)) //double move
+                        CALL_ADD_MOVE(r+2*side,c,0,0,0);
                     }
-                    if (ON_BOARD(r+side,c+1)&&IS_THEIRS(r+side,c+1)) CALL_ADD_MOVE(r+side,c+1,IS_END_ROW(r+side,side));
-                    if (ON_BOARD(r+side,c-1)&&IS_THEIRS(r+side,c-1)) CALL_ADD_MOVE(r+side,c-1,IS_END_ROW(r+side,side));
+                    if (ON_BOARD(r+side,c+1)&&IS_THEIRS(r+side,c+1)) CALL_ADD_MOVE(r+side,c+1,IS_END_ROW(r+side,side),0,0);
+                    if (ON_BOARD(r+side,c-1)&&IS_THEIRS(r+side,c-1)) CALL_ADD_MOVE(r+side,c-1,IS_END_ROW(r+side,side),0,0);
                     break;
                 case QUEEN:
                 case ROOK:
-                    if (c<7) for (int8_t cc = c+1; cc <  8; cc++){ MOVES_SLIDING_PIECE(r, cc) }
-                    if (c>0) for (int8_t cc = c-1; cc >= 0; cc--){ MOVES_SLIDING_PIECE(r, cc) }
-                    if (r<7) for (int8_t rr = r+1; rr <  8; rr++){ MOVES_SLIDING_PIECE(rr, c) }
-                    if (r>0) for (int8_t rr = r-1; rr >= 0; rr--){ MOVES_SLIDING_PIECE(rr, c) }
+                    if (c<7) for (int8_t cc = c+1; cc <  8; cc++){ MOVES_SLIDING_PIECE(r, cc, DOES_BREAK_CASTLE) }
+                    if (c>0) for (int8_t cc = c-1; cc >= 0; cc--){ MOVES_SLIDING_PIECE(r, cc, DOES_BREAK_CASTLE) }
+                    if (r<7) for (int8_t rr = r+1; rr <  8; rr++){ MOVES_SLIDING_PIECE(rr, c, DOES_BREAK_CASTLE) }
+                    if (r>0) for (int8_t rr = r-1; rr >= 0; rr--){ MOVES_SLIDING_PIECE(rr, c, DOES_BREAK_CASTLE) }
                     if (state->pieces[r][c] == ROOK) break; //fall through if queen...
                 case BISHOP:
-                    for (int8_t d=1; d<=MIN(7-r,7-c); d++){ MOVES_SLIDING_PIECE(r+d,c+d) };
-                    for (int8_t d=1; d<=MIN(7-r,  c); d++){ MOVES_SLIDING_PIECE(r+d,c-d) };
-                    for (int8_t d=1; d<=MIN(  r,7-c); d++){ MOVES_SLIDING_PIECE(r-d,c+d) };
-                    for (int8_t d=1; d<=MIN(  r,  c); d++){ MOVES_SLIDING_PIECE(r-d,c-d) };
+                    for (int8_t d=1; d<=MIN(7-r,7-c); d++){ MOVES_SLIDING_PIECE(r+d,c+d,0) };
+                    for (int8_t d=1; d<=MIN(7-r,  c); d++){ MOVES_SLIDING_PIECE(r+d,c-d,0) };
+                    for (int8_t d=1; d<=MIN(  r,7-c); d++){ MOVES_SLIDING_PIECE(r-d,c+d,0) };
+                    for (int8_t d=1; d<=MIN(  r,  c); d++){ MOVES_SLIDING_PIECE(r-d,c-d,0) };
                     break;
                 case KNIGHT:
                     for (uint8_t i = 0; i < 8; i++){
                         if (ON_BOARD(r+horse_moves[i][0],c+horse_moves[i][1]) && 
                             side*state->pieces[r+horse_moves[i][0]][c+horse_moves[i][1]] <= 0)
-                        CALL_ADD_MOVE(r+horse_moves[i][0],c+horse_moves[i][1],0);
+                        CALL_ADD_MOVE(r+horse_moves[i][0],c+horse_moves[i][1],0,0,0);
                     } break;
                 case KING:
                     for (uint8_t i = 0; i < 8; i++){
-                        if (ON_BOARD(r+king_moves[i][0],c+king_moves[i][1]) && 
+                        if (ON_BOARD(r+king_moves[i][0],c+king_moves[i][1]) &&
                             side*state->pieces[r+king_moves[i][0]][c+king_moves[i][1]] <= 0)
-                        CALL_ADD_MOVE(r+king_moves[i][0],c+king_moves[i][1],0);
-                    } break;
+                        //only says that this makes a castle invalid if is currently valid
+                        CALL_ADD_MOVE(r+king_moves[i][0],c+king_moves[i][1],0,0,
+                                      !GET_BIT(state->invalid_castles,KINGSIDE_BIT(side)));
+                    }
+                    //castling
+                    if (IS_EMPTY(BACK_ROW(side),5)&&IS_EMPTY(BACK_ROW(side),6)&&\
+                        !GET_BIT(state->invalid_castles,KINGSIDE_BIT(side)))
+                    CALL_ADD_MOVE(r,c+2,0,KINGSIDE,1);
+
+                    if (IS_EMPTY(BACK_ROW(side),1)&&IS_EMPTY(BACK_ROW(side),2)&&IS_EMPTY(BACK_ROW(side),3)&&\
+                        !GET_BIT(state->invalid_castles,QUEENSIDE_BIT(side)))
+                    CALL_ADD_MOVE(r,c-2,0,QUEENSIDE,1);
+
+
             }
         }
     }
+
     return num_moves;
 }
 

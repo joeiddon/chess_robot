@@ -19,6 +19,8 @@
 #define IS_MINE(r,c) (side*state->pieces[(r)][(c)]>0)
 //why not just use !IS_MINE? because of empty squares; so...
 #define IS_THEIRS(r,c) (side*state->pieces[(r)][(c)]<0)
+//is that square empty?
+#define IS_EMPTY(r,c) (state->pieces[(r)][(c)]==0)
 
 //is the row a pawn-promote row for the given side?
 #define IS_END_ROW(r,side) ((r)==((side)==WHITE?7:0))
@@ -27,13 +29,16 @@
 #define CHECK_SLIDING_PIECE(r,c,p) if (state->pieces[(r)][(c)] == -side*(p) || state->pieces[(r)][(c)] == -side*QUEEN) return 1; \
                                    if (state->pieces[(r)][(c)] != 0) break;
 
-///calls add_move() with the appropriate variables - moving to (i,j). (p) is whether it is a pawn promote
-#define CALL_ADD_MOVE(i,j,p) add_move(state, moves_array, &num_moves, (move_t){{r,c},{(i),(j)},(p),0}, side)
+///calls add_move() with the appropriate variables - moving to (i,j). (p) is pawn promote, (ca) is castling, (m) is if makes castling invalid
+#define CALL_ADD_MOVE(i,j,p,ca,m) add_move(state, moves_array, &num_moves, (move_t){{r,c},{(i),(j)},(p),(ca),(m)}, side)
 
 //again this just shortens the generate_moves() code...  NOT A FUNCTION-LIKE MACRO, again
-#define MOVES_SLIDING_PIECE(i,c) if (state->pieces[(i)][(c)] == 0){CALL_ADD_MOVE((i),(c),0);} \
-                                 else if (IS_THEIRS((i),(c))){CALL_ADD_MOVE((i),(c),0);break;} \
-                                 else break; \
+#define MOVES_SLIDING_PIECE(i,j,m) if (state->pieces[(i)][(j)] == 0){CALL_ADD_MOVE((i),(j),0,0,(m));} \
+                                 else if (IS_THEIRS((i),(j))){CALL_ADD_MOVE((i),(j),0,0,(m));break;} \
+                                 else break;
+
+//this is super hacky, but if, when moving a rook, it was valid to castle, we give 1 - it makes_castle_invalid, otherwise, 0
+#define DOES_BREAK_CASTLE (!GET_BIT(state->invalid_castles,c==7?KINGSIDE_BIT(side):QUEENSIDE_BIT(side)))
 
 
 uint8_t in_check(state_t *state, int8_t side);
