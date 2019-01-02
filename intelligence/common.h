@@ -45,11 +45,15 @@
 #define KINGSIDE  (1)
 #define QUEENSIDE (2)
 
+//debug options, comment in for debugging
+//#define DEBUG_NEGAMAX
+
 //see README.md for better explanation of these strutures
 
 typedef struct {
     uint8_t from[2];
     uint8_t to[2];
+    int8_t  piece_taken; //what piece will be taken? 0 for none of course
     uint8_t is_pawn_promotion; //just 1 or 0; promotion assumed to be queen
     uint8_t castle; //KINGSIDE or QUEENSIDE; move postions (from,to) are that of king
     uint8_t makes_castle_invalid; //does it make a castle invalid? (for inverse_move)
@@ -58,8 +62,6 @@ typedef struct {
 typedef struct {
     //array of piece codes
     int8_t pieces[8][8];
-    //piece code of last taken for inverse_move function
-    int8_t last_taken;
     //bits 0,1,2,3 represent which castle moves are invalid
     //see #defines above for which bit represents which castle type
     uint8_t invalid_castles;

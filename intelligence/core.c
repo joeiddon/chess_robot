@@ -5,14 +5,36 @@
 #include "core.h"
 #include "helpers.h"
 
-const int8_t horse_moves[8][2] = {{1,2},{-1,2},{1,-2},{-1,-2},{2,1},{-2,1},{2,-1},{-2,-2}};
+const int8_t horse_moves[8][2] = {{1,2},{-1,2},{1,-2},{-1,-2},{2,1},{-2,1},{2,-1},{-2,-1}};
 const int8_t king_moves[8][2] = {{0,1},{0,-1},{1,0},{-1,0},{1,1},{-1,1},{1,-1},{-1,-1}};
+
+int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth){
+    //returns best score and sets best_move to the best_move
+    #ifdef DEBUG_NEGAMAX
+    printf("~~~~~SPAWNED at depth: %d~~~~~\n", depth);
+    print_state(state);
+    #endif
+    if (depth == 0) return side*evaluate(state);
+    int16_t best_score = -INFINITY;
+    move_t moves[MAX_NUM_MOVES];
+    uint8_t num_moves = generate_moves(state, side, moves);
+    for (uint8_t i = 0; i < num_moves; i++){
+        make_move(state, moves+i);
+        int16_t score = -negamax(state, NULL, -side, depth-1);
+        inverse_move(state, moves+i);
+        if (score > best_score){
+            best_score = score;
+            if (best_move != NULL) *best_move = moves[i];
+        }
+    }
+    return best_score;
+}
 
 int16_t evaluate(state_t *state){
     //evaluates the board for white
     //black's score is -1*this
-    if (is_checkmated(state, BLACK)) return  INFINITE_SCORE;
-    if (is_checkmated(state, WHITE)) return -INFINITE_SCORE;
+    if (is_checkmated(state, BLACK)) return  INFINITY;
+    if (is_checkmated(state, WHITE)) return -INFINITY;
     int16_t score = 0;
     for (uint8_t i = 0; i < 8; i++){
         for (uint8_t j = 0; j < 8; j++){
