@@ -35,7 +35,6 @@ void main(){
     printf("is black in check? %s\n", in_check(&state, BLACK) ? "yes" : "no");
     */
 
-    /*
     //tests generate_moves() function and inverse_move()
     move_t moves[MAX_NUM_MOVES];
     //move_t *moves = malloc(sizeof(moves_t) * MAX_NUM_MOVES); //equivalent to above line
@@ -47,7 +46,6 @@ void main(){
         print_state(&state);
         inverse_move(&state, &moves[i]);
     }
-    */
 
     /*
     printf("white is checkmated? %s\n", is_checkmated(&state, WHITE) ? "yes" : "no");

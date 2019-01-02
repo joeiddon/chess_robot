@@ -25,7 +25,7 @@ void print_state(state_t *state){
     }
     printf(" |0|1|2|3|4|5|6|7|\nallowed castle moves:\n");
     for (uint8_t i = 0; i < 4; i++){
-        if (!GET_BIT(state->invalid_castles,i+1)){
+        if (!GET_BIT(state->invalid_castles,i)){
             printf("- %s\n", state_invalid_castles_words[i]);
         }
     }

@@ -33,10 +33,10 @@
 #define SET_BIT_HIGH(x,i) x |= (1<<i)
 #define SET_BIT_LOW(x,i)  x &= ~(1<<i)
 //bit meanings in state_t.sides_can_castle
-#define BIT_WHITE_KINGSIDE  (1)
-#define BIT_WHITE_QUEENSIDE (2)
-#define BIT_BLACK_KINGSIDE  (3)
-#define BIT_BLACK_QUEENSIDE (4)
+#define BIT_WHITE_KINGSIDE  (0)
+#define BIT_WHITE_QUEENSIDE (1)
+#define BIT_BLACK_KINGSIDE  (2)
+#define BIT_BLACK_QUEENSIDE (3)
 //gets appropriate bit for side
 #define KINGSIDE_BIT(side) ((side)==WHITE?BIT_WHITE_KINGSIDE:BIT_BLACK_KINGSIDE)
 #define QUEENSIDE_BIT(side) ((side)==WHITE?BIT_WHITE_QUEENSIDE:BIT_BLACK_QUEENSIDE)
@@ -60,7 +60,7 @@ typedef struct {
     int8_t pieces[8][8];
     //piece code of last taken for inverse_move function
     int8_t last_taken;
-    //bits 1,2,3 and 4 (not 0) of this char represent whether that castle type is invalid
+    //bits 0,1,2,3 represent which castle moves are invalid
     //see #defines above for which bit represents which castle type
     uint8_t invalid_castles;
 } state_t;
