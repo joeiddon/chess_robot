@@ -18,6 +18,8 @@ int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, i
     #ifdef DEBUG_NEGAMAX
     printf("~~~~~SPAWNED at depth: %d~~~~~\n", depth);
     print_state(state);
+    state_t state_backup;
+    copy_state(state, &state_backup);
     #endif
     if (depth == 0) return side*evaluate(state);
     int16_t best_score = -INFINITY;
@@ -143,7 +145,7 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array){
                     if (c>0) for (int8_t cc = c-1; cc >= 0; cc--){ MOVES_SLIDING_PIECE(r, cc, DOES_BREAK_CASTLE) }
                     if (r<7) for (int8_t rr = r+1; rr <  8; rr++){ MOVES_SLIDING_PIECE(rr, c, DOES_BREAK_CASTLE) }
                     if (r>0) for (int8_t rr = r-1; rr >= 0; rr--){ MOVES_SLIDING_PIECE(rr, c, DOES_BREAK_CASTLE) }
-                    if (state->pieces[r][c] == ROOK) break; //fall through if queen...
+                    if (ABS(state->pieces[r][c]) == ROOK) break; //fall through if queen...
                 case BISHOP:
                     for (int8_t d=1; d<=MIN(7-r,7-c); d++){ MOVES_SLIDING_PIECE(r+d,c+d,0) };
                     for (int8_t d=1; d<=MIN(7-r,  c); d++){ MOVES_SLIDING_PIECE(r+d,c-d,0) };
@@ -166,10 +168,12 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array){
                     }
                     //castling
                     if (IS_EMPTY(BACK_ROW(side),5)&&IS_EMPTY(BACK_ROW(side),6)&&\
+                        state->pieces[BACK_ROW(side)][7]==side*ROOK&&\
                         !GET_BIT(state->invalid_castles,KINGSIDE_BIT(side)))
                     CALL_ADD_MOVE(r,c+2,0,KINGSIDE,1);
 
                     if (IS_EMPTY(BACK_ROW(side),1)&&IS_EMPTY(BACK_ROW(side),2)&&IS_EMPTY(BACK_ROW(side),3)&&\
+                        state->pieces[BACK_ROW(side)][0]==side*ROOK&&\
                         !GET_BIT(state->invalid_castles,QUEENSIDE_BIT(side)))
                     CALL_ADD_MOVE(r,c-2,0,QUEENSIDE,1);
 

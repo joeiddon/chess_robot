@@ -9,6 +9,10 @@ void print_state(state_t *state);
 void print_move(move_t* move);
 void make_move(state_t *state, move_t *move);
 void inverse_move(state_t *state, move_t *move);
-void print_negamax_route(state_t *state, int8_t side, uint8_t depth);
+void print_negamax_route(state_t *state, move_t *best_move, int8_t side, uint8_t depth);
+
+#ifdef DEBUG_NEGAMAX
+void copy_state(state_t *in_state, state_t *copy_state);
+#endif
 
 #endif

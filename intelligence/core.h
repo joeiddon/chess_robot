@@ -42,8 +42,8 @@
 
 //again this just shortens the generate_moves() code...  NOT A FUNCTION-LIKE MACRO, again
 #define MOVES_SLIDING_PIECE(i,j,m) if (state->pieces[(i)][(j)] == 0){CALL_ADD_MOVE((i),(j),0,0,(m));} \
-                                 else if (IS_THEIRS((i),(j))){CALL_ADD_MOVE((i),(j),0,0,(m));break;} \
-                                 else break;
+                                   else if (IS_THEIRS((i),(j))){CALL_ADD_MOVE((i),(j),0,0,(m));break;} \
+                                   else break;
 
 //this is super hacky, but if, when moving a rook, it was valid to castle, we give 1 - it makes_castle_invalid, otherwise, 0
 #define DOES_BREAK_CASTLE (!GET_BIT(state->invalid_castles,c==7?KINGSIDE_BIT(side):QUEENSIDE_BIT(side)))

@@ -35,7 +35,11 @@ void print_state(state_t *state){
 
 
 void print_move(move_t *move){
-    printf("move [%d,%d] => [%d,%d]\n", move->from[0], move->from[1], move->to[0], move->to[1]);
+    printf("move [%d,%d] => [%d,%d], takes: %c, pawn promote? %d, castle? %s, makes_castle_invalid? %d\n", \
+      move->from[0], move->from[1], move->to[0], move->to[1], \
+      move->piece_taken>0?UPPER(piece_chars[move->piece_taken]):piece_chars[move->piece_taken], \
+      move->is_pawn_promotion, move->castle?(move->castle==KINGSIDE?"kingside":"queenside"):"no", \
+      move->makes_castle_invalid);
 }
 
 void make_move(state_t *state, move_t *move){
@@ -94,7 +98,7 @@ void inverse_move(state_t *state, move_t *move){
     }
 }
 
-void print_negamax_route(state_t *state, int8_t side, uint8_t depth){
+void print_negamax_route(state_t *state, move_t *best_move, int8_t side, uint8_t depth){
     //To see what negamax had in mind, we sequentially make the best move for the given
     //depth and then decrease the depth by 1 and make the best move for the other side
     //which is what the negamax algorithm works out. At each stage, we print the current state
@@ -126,4 +130,13 @@ void print_negamax_route(state_t *state, int8_t side, uint8_t depth){
     move_pointer = move_route+depth;
     while (--move_pointer >= move_route)
     inverse_move(state, move_pointer);
+    //copy the best move to their passed in pointer
+    if (best_move != NULL)
+    memcpy(best_move, move_route, sizeof(move_t));
 }
+
+#ifdef DEBUG_NEGAMAX
+void copy_state(state_t *in_state, state_t *copy_state){
+    memcpy(copy_state, in_state, sizeof(state_t));
+}
+#endif
