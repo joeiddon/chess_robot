@@ -5,7 +5,9 @@
 #include "core.h"
 #include "helpers.h"
 
+
 //standard start start
+/*
 state_t state = {{{ ROOK,  KNIGHT,  BISHOP,  QUEEN,  KING,  BISHOP,  KNIGHT,  ROOK},
                   { PAWN,    PAWN,    PAWN,   PAWN,  PAWN,    PAWN,    PAWN,  PAWN},
                   {    0,       0,       0,      0,     0,       0,       0,     0},
@@ -14,8 +16,9 @@ state_t state = {{{ ROOK,  KNIGHT,  BISHOP,  QUEEN,  KING,  BISHOP,  KNIGHT,  RO
                   {    0,       0,       0,      0,     0,       0,       0,     0},
                   {-PAWN,   -PAWN,   -PAWN,  -PAWN, -PAWN,   -PAWN,   -PAWN, -PAWN},
                   {-ROOK, -KNIGHT, -BISHOP, -QUEEN, -KING, -BISHOP, -KNIGHT, -ROOK}}, 0};
-/*
-//complicated state to test generate_moves()
+*/
+
+//complicated state to test analyse generate_moves() and other things
 state_t state = {{{ ROOK,       0,       0,      0,  KING,  BISHOP,  KNIGHT,  ROOK},
                   {    0,    PAWN,       0, BISHOP,  PAWN,    PAWN,       0,  PAWN},
                   {    0,       0,  KNIGHT,      0,     0,  -BISHOP,       0,     0},
@@ -24,7 +27,7 @@ state_t state = {{{ ROOK,       0,       0,      0,  KING,  BISHOP,  KNIGHT,  RO
                   {    0,       0,   -PAWN,      0, -PAWN,       0,       0,     0},
                   {    0,       0,       0,  -PAWN,     0,   -PAWN,       0, -PAWN},
                   {-ROOK, -KNIGHT, -BISHOP,      0, -KING,       0, -KNIGHT, -ROOK}}, 0};
-*/
+
 /*
 //tests castling
 state_t state = {{{ ROOK,  0,            0,   0,  KING,  BISHOP,  KNIGHT,  ROOK},
@@ -59,43 +62,16 @@ void main(){
     printf("is black in check? %s\n", in_check(&state, BLACK) ? "yes" : "no");
     */
 
-    /* who needs recursion eh? 5-nested for-loops, no problem
-       ^ this was actually just for debugging a STUPID bug; will delete after next commit,
-         but may as well save this for future reference
+    /*
     //tests generate_moves() function and inverse_move()
-    move_t moves1[MAX_NUM_MOVES];
-    move_t moves2[MAX_NUM_MOVES];
-    move_t moves3[MAX_NUM_MOVES];
-    move_t moves4[MAX_NUM_MOVES];
-    move_t moves5[MAX_NUM_MOVES];
-    //move_t *moves = malloc(sizeof(moves_t) * MAX_NUM_MOVES); //equivalent to above line
+    move_t moves[MAX_NUM_MOVES];
     printf("possible moves for white:\n");
-    uint8_t num_moves1 = generate_moves(&state, BLACK, moves1);
-    for (uint8_t i = 0; i < num_moves1; i++){
-        //print_move(&moves1[i]);
-        make_move(&state, moves1+i); //nifty pointer trick :)
-        uint8_t num_moves2 = generate_moves(&state, WHITE, moves2);
-        for (uint8_t j = 0; j < num_moves2; j++){
-            make_move(&state, moves2+j);
-            uint8_t num_moves3 = generate_moves(&state, BLACK, moves3);
-            for (uint8_t k = 0; k < num_moves3; k++){
-                make_move(&state, moves3+k);
-                uint8_t num_moves4 = generate_moves(&state, WHITE, moves4);
-                for (uint8_t l = 0; l < num_moves4; l++){
-                    make_move(&state, moves4+l);
-                    uint8_t num_moves5 = generate_moves(&state, BLACK, moves5);
-                    for (uint8_t m = 0; m < num_moves5; m++){
-                        make_move(&state, moves5+m);
-                        inverse_move(&state, moves5+m);
-                    }
-                    inverse_move(&state, moves4+l);
-                }
-                inverse_move(&state, moves3+k);
-            }
-            inverse_move(&state, &moves2[j]);
-        }
-        //print_state(&state);
-        inverse_move(&state, &moves1[i]);
+    uint8_t num_moves = generate_moves(&state, WHITE, moves);
+    for (uint8_t i = 0; i < num_moves; i++){
+        print_move(&moves[i]);
+        make_move(&state, moves+i); //nifty pointer trick :)
+        print_state(&state);
+        inverse_move(&state, &moves[i]);
     }
     print_state(&state);
     */
@@ -108,9 +84,8 @@ void main(){
     //printf("evaluation for white: %d\n",  evaluate(&state));
     //printf("evaluation for black: %d\n", -evaluate(&state));
 
-
     move_t best_move;
-    int16_t end_score = negamax(&state, &best_move, WHITE, 5, -INFINITY, INFINITY);
+    int16_t end_score = negamax(&state, &best_move, WHITE, 6, -INFINITY, INFINITY);
     printf("best move for white:\n");
     print_move(&best_move);
     printf("yielding an eventual evaluation of: %d\n", end_score);

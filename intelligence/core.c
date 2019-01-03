@@ -25,19 +25,38 @@ int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, i
     int16_t best_score = -INFINITY;
     move_t moves[MAX_NUM_MOVES];
     uint8_t num_moves = generate_moves(state, side, moves);
+    uint8_t move_order[MAX_NUM_MOVES]; //array of indicies
+    order_moves(moves, num_moves, move_order);
     for (uint8_t i = 0; i < num_moves; i++){
-        make_move(state, moves+i);
+        make_move(state, moves+move_order[i]); //pointer addition! - same as &moves[...]
         int16_t score = -negamax(state, NULL, -side, depth-1, -beta, -alpha);
-        inverse_move(state, moves+i);
+        inverse_move(state, moves+move_order[i]);
         if (score > best_score){
             best_score = score;
-            if (best_move != NULL) *best_move = moves[i];
+            if (best_move != NULL) *best_move = moves[move_order[i]];
         }
         if (best_score > alpha) alpha = best_score;
         if (alpha >= beta) { //prune tree as we have found a score we can be sure of achieving better than their best score
         /*printf("branching factor: %d\n", i);*/return alpha;}
     }
     return best_score;
+}
+
+int16_t order_moves(move_t *moves, uint8_t num_moves, uint8_t *order){
+    //populates the order array with indicies of moves in the moves array
+    //ordering them with the most interesting moves first
+    //sort method: fill "interesting moves" from the front, and
+    //"uninteresting moves" from the back then they will meet in the middle
+    uint8_t interesting_index = 0; //post-incremented
+    uint8_t uninteresting_index = num_moves; //pre-decremented
+    for (uint8_t i = 0; i < num_moves; i++){
+        //most basic "interesting test" :)
+        if (moves[i].piece_taken){
+            order[interesting_index++] = i;
+        } else {
+            order[--uninteresting_index] = i;
+        }
+    }
 }
 
 int16_t evaluate(state_t *state){

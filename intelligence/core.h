@@ -57,5 +57,6 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array);
 void add_move(state_t *state, move_t *moves_array, uint8_t *moves, move_t move, uint8_t side);
 int16_t evaluate(state_t *state);
 int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, int16_t alpha, int16_t beta);
+int16_t order_moves(move_t *moves, uint8_t num_moves, uint8_t *order);
 
 #endif
