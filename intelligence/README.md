@@ -79,7 +79,13 @@ Therefore, whenever we can assure that our best outcome is better than their bes
 
 This is coded by holding two variables: `alpha` and `beta` which represent our best and their best outcomes respectively. Then, we can say that whenever `alpha >= beta`, we can stop looping through our different moves (`break`/`return`). Since we are using negamax, when we pass these down to the next `negamax`, we must reverse them around - i.e. our best score is now the opponent's "opponent's best score" and their best score is now the opponent's "best score". Finally, we must negate both these values because they are trying to maximise their score.
 
-My implementation for this algorithm is found in **`core.c`**. It could be improved by doing some initial move ordering so pruning is done sooner and more of the tree is cut off.
+This method leads to a major perfomance game. In the mid-game, the engine can search to depth `5` from the initial state in only about `1` second.
+
+However, a very simple addition can be made to give us further advantages. This stems from the fact that the more of the tree we can prune earlier on, the faster are search is. We can prune more tree earlier on by doing some initial move ordering - taking a guess at what will be a good move. This function could be improved, but my current function `order_moves()` simply tells negamax which moves take pieces and which don't (very simple given our `move_t` data structure). Using this, these capture moves can be searched first - making prunes possible earlier.
+
+The result of this initial move ordering is dramatic. It can now search to depth `6` from a complicated state (lots of captures, very congested) in just `1.5` seconds where the old algorithm took roughly `12` seconds for this!
+
+My implementation for the negamax algorithm along with the simplistic `order_moves()` function can be found in **`core.c`**
 
 ### Limitations:
 
