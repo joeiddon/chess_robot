@@ -21,7 +21,7 @@ GRAB_TIME   = 0.5
 def get_serial_port():
     ser_ports = glob.glob('/dev/ttyUSB*')
     return ser_ports[0] if len(ser_ports) == 1 else \
-           input(f'Which serial port from: {ser_ports}? ')
+           input('Which serial port from:', ser_ports, '? ')
 
 def get_piece_coordinate(x,y):
     '''Maps between piece coordinates [0-8,0-8] to arm coordinates in mm'''
