@@ -54,11 +54,11 @@
 
 //servo offsets (microseconds pulse widths)
 #define SERVO_OFFSET_FRNT -230
-#define SERVO_OFFSET_BACK -520
+#define SERVO_OFFSET_BACK -640
 
 //grabber position in pulse widths
-#define SERVO_GRAB_POS_ON   2190
-#define SERVO_GRAB_POS_OFF  1970
+#define SERVO_GRAB_POS_ON   2150
+#define SERVO_GRAB_POS_OFF  1940
 
 //relevant dimensions of arm
 //GRIPPER_HEIGHT must be less than PIVOT_HEIGHT as using unsigned
