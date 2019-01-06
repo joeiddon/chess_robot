@@ -18,8 +18,10 @@
 //used in calculating diaganol moves
 #define MIN(x,y) ((x)<(y)?(x):(y))
 
-//converts lower case character to upper case
-#define UPPER(c) ((c)^32)
+//flips case of character
+#define CHANGE_CASE(c) ((c)^32)
+//is the character upper case?
+#define IS_LOWER(c) ((c) >> 5 & 1)
 
 //whats the maximum number of moves at a give state?
 #define MAX_NUM_MOVES (100)

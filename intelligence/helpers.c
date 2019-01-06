@@ -17,7 +17,7 @@ void print_state(state_t *state){
         printf("%d|", i);
         for (int8_t j = 0; j < 8; j++){
             if (state->pieces[i][j] > 0){
-                printf("%c|", UPPER(piece_chars[state->pieces[i][j]]));
+                printf("%c|", CHANGE_CASE(piece_chars[state->pieces[i][j]]));
             } else {
                 printf("%c|", piece_chars[-state->pieces[i][j]]);
             }
@@ -37,7 +37,7 @@ void print_state(state_t *state){
 void print_move(move_t *move){
     printf("move [%d,%d] => [%d,%d], takes: %c, pawn promote? %d, castle? %s, makes_castle_invalid? %d\n", \
       move->from[0], move->from[1], move->to[0], move->to[1], \
-      move->piece_taken>0?UPPER(piece_chars[move->piece_taken]):piece_chars[-move->piece_taken], \
+      move->piece_taken>0?CHANGE_CASE(piece_chars[move->piece_taken]):piece_chars[-move->piece_taken], \
       move->is_pawn_promotion, move->castle?(move->castle==KINGSIDE?"kingside":"queenside"):"no", \
       move->makes_castle_invalid);
 }
