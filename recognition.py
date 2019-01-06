@@ -13,43 +13,44 @@ def recognise(display=False):
     """
 
     #general
-    sqr_padding = 8      #inner for each grid square
+    sqr_padding = 1      #inner for each grid square
     line_col = 255
 
     #detection thresholds
     white_pix_thresh = 105 #threshold for pix to count as white
     black_pix_thresh = 50  #threshold for pix to count as black
-    white_pix_no = 10      #number of white threshed pixels for piece
-    black_pix_no = 10      #number of black threshed pixels for piece
+    white_pix_no = 1      #number of white threshed pixels for piece
+    black_pix_no = 1      #number of black threshed pixels for piece
 
     #pixels of each edge of chess board
     #(hard coded because board's position must be fixed anyway for arm)
-    t_edge = 0
-    b_edge = 246
-    l_edge = 122
-    r_edge = 370
+    t_edge = 12
+    b_edge = 76
+    l_edge = 35
+    r_edge = 103
 
     #size of one grid square in pixels
-    sqr_sz = round(((r_edge-l_edge)+(b_edge-t_edge))/16)
+    sqr_sz = ((r_edge-l_edge)+(b_edge-t_edge))/16
 
-    #get the images
-    raw  = vision.raw_img(480, 360)
+    #get the image
+    raw  = vision.raw_img(128, 96)
     grey = vision.greyscale(raw)
     #blr  = vision.gaussianBlur(grey, 3, 1.5)
     #sbl  = vision.sobel(blr)
+    print(raw.shape)
 
     black_threshed = grey < black_pix_thresh
     white_threshed = grey < white_pix_thresh
 
-    black_pieces = np.zeros((8,8), 'uint8')
-    white_pieces = np.zeros((8,8), 'uint8')
+    black_pieces = np.zeros((8,8), 'bool')
+    white_pieces = np.zeros((8,8), 'bool')
 
     for y in range(8):
         for x in range(8):
-            l = l_edge + ( x    * sqr_sz) + sqr_padding
-            r = l_edge + ((x+1) * sqr_sz) - sqr_padding
-            t = t_edge + ( y    * sqr_sz) + sqr_padding
-            b = t_edge + ((y+1) * sqr_sz) - sqr_padding
+            l = l_edge + int( x    * sqr_sz) + sqr_padding
+            r = l_edge + int((x+1) * sqr_sz) - sqr_padding
+            t = t_edge + int( y    * sqr_sz) + sqr_padding
+            b = t_edge + int((y+1) * sqr_sz) - sqr_padding
 
             black_sqr = black_threshed[t:b,l:r]
             white_sqr = white_threshed[t:b,l:r]
@@ -75,8 +76,8 @@ def recognise(display=False):
         grey[t_edge]   = \
         grey[b_edge]   = line_col
         print('whites:  blacks:')
-        [print(w,b) for w,b in zip((''.join(map(str,r)) for r in white_pieces),
-                                   (''.join(map(str,r)) for r in black_pieces))]
+        [print(w,b) for w,b in zip((''.join(str(int(i)) for i in r) for r in white_pieces),
+                                   (''.join(str(int(i)) for i in r) for r in black_pieces))]
         fig = plt.gcf()
         for i,a in enumerate(('grey', 'white_threshed', 'white_pieces', 'black_pieces')):
             ax = fig.add_subplot(2,2,i+1)
@@ -85,4 +86,4 @@ def recognise(display=False):
 
         plt.show()
 
-    return (white_pieces, black_pieces)
+    return (np.flip(white_pieces,1), np.flip(black_pieces,1))

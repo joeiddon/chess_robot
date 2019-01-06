@@ -9,9 +9,9 @@ def raw_img(x, y):
     x = int(32*math.ceil(x/32))
     y = int(16*math.ceil(y/16))
     with picamera.PiCamera() as camera:
-        camera.resolution = (x, y)
+        camera.resolution = (640,480)
         output = np.empty((y, x, 3), dtype='uint8')
-        camera.capture(output, 'rgb')
+        camera.capture(output, 'rgb', resize=(x,y))
         return output
 
 def greyscale(img):
