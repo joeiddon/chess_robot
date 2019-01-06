@@ -67,16 +67,13 @@ class Arm():
         r = self.serial.read()[0]
         if r != 1:
             raise Exception('Arduino return code != 1: '+ str(r))
-    def _flush_serial(self):
-        if self.serial.in_waiting:
-            flushed = self.serial.read(self.serial.in_waiting)
-            #print('WARNING: Unexpected message from Arduino: ', list(flushed))
     def _write_and_check_success(self, message):
-        self._flush_serial()
+        self.serial.flushInput()
         self.serial.write(message)
-        if self.serial.read()[0] != 0:
+        r = self.serial.read()[0]
+        if r != 0:
             raise Exception('Arduino code non-zero when sending: '+str(message)+ \
-                            'It replied with: '+str(list(self.serial.read(self.serial.in_waiting))))
+                            'It replied with: '+str(r))
     def _connect_to_arduino(self):
         try:
             self.serial = serial.Serial(self.port, 115200);
