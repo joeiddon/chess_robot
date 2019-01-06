@@ -13,21 +13,20 @@ def recognise(display=False):
     """
 
     #general
-    sqr_padding = 1      #inner for each grid square
     line_col = 255
 
     #detection thresholds
-    white_pix_thresh = 105 #threshold for pix to count as white
-    black_pix_thresh = 50  #threshold for pix to count as black
-    white_pix_no = 1      #number of white threshed pixels for piece
-    black_pix_no = 1      #number of black threshed pixels for piece
+    white_pix_thresh = 95  #threshold for pix to count as white
+    black_pix_thresh = 44  #threshold for pix to count as black
+    white_pix_no = 3      #number of white threshed pixels for piece
+    black_pix_no = 3      #number of black threshed pixels for piece
 
     #pixels of each edge of chess board
     #(hard coded because board's position must be fixed anyway for arm)
     t_edge = 12
-    b_edge = 76
+    b_edge = 78
     l_edge = 35
-    r_edge = 103
+    r_edge = 101
 
     #size of one grid square in pixels
     sqr_sz = ((r_edge-l_edge)+(b_edge-t_edge))/16
@@ -37,7 +36,6 @@ def recognise(display=False):
     grey = vision.greyscale(raw)
     #blr  = vision.gaussianBlur(grey, 3, 1.5)
     #sbl  = vision.sobel(blr)
-    print(raw.shape)
 
     black_threshed = grey < black_pix_thresh
     white_threshed = grey < white_pix_thresh
@@ -47,10 +45,10 @@ def recognise(display=False):
 
     for y in range(8):
         for x in range(8):
-            l = l_edge + int( x    * sqr_sz) + sqr_padding
-            r = l_edge + int((x+1) * sqr_sz) - sqr_padding
-            t = t_edge + int( y    * sqr_sz) + sqr_padding
-            b = t_edge + int((y+1) * sqr_sz) - sqr_padding
+            l = l_edge + int( x    * sqr_sz)
+            r = l_edge + int((x+1) * sqr_sz)
+            t = t_edge + int( y    * sqr_sz)
+            b = t_edge + int((y+1) * sqr_sz)
 
             black_sqr = black_threshed[t:b,l:r]
             white_sqr = white_threshed[t:b,l:r]
@@ -79,8 +77,8 @@ def recognise(display=False):
         [print(w,b) for w,b in zip((''.join(str(int(i)) for i in r) for r in white_pieces),
                                    (''.join(str(int(i)) for i in r) for r in black_pieces))]
         fig = plt.gcf()
-        for i,a in enumerate(('grey', 'white_threshed', 'white_pieces', 'black_pieces')):
-            ax = fig.add_subplot(2,2,i+1)
+        for i,a in enumerate(('raw', 'white_threshed', 'white_pieces', 'grey', 'black_threshed', 'black_pieces')):
+            ax = fig.add_subplot(2,3,i+1)
             ax.set_title(a)
             ax.imshow(locals()[a],'gray')
 
