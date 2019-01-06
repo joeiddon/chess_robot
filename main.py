@@ -1,16 +1,19 @@
 #built-in libraries
-import glob, time, subprocess
+import glob, time, subprocess, warnings
 #numpy
 import numpy as np
 #my libraries
 import arm_lib, recognition
 
+#turm off picamera warnings...
+warnings.simplefilter('ignore')
+
 #positions of chess board
 X_SIDES = 130
-Y_CLOSE = 178
-Y_FAR   = 425
-Z_PIECE =  33
-Z_ABOVE = 105
+Y_CLOSE = 185
+Y_FAR   = 431
+Z_PIECE =  35
+Z_ABOVE = 100
 
 #position to go to between moves
 MOVE_POS = (int(arm_lib.LIMITS['x'][1]/2),
@@ -20,8 +23,8 @@ MOVE_POS = (int(arm_lib.LIMITS['x'][1]/2),
 REST_POS = (arm_lib.LIMITS['x'][1]-5, *MOVE_POS[1:])
 
 #timing, in seconds
-SETTLE_TIME = 0.9
-GRAB_TIME   = 0.5
+SETTLE_TIME = 0.9 #time for servos to move and settle
+GRAB_TIME   = 0.5 #time for grabber to open/close
 
 #how long does the computer have to think (in seconds)
 THOUGHT_TIME = 1
@@ -40,8 +43,6 @@ def get_piece_coordinate(x,y):
 def move_piece(c1, c2):
     c1, c2 = (get_piece_coordinate(*c) for c in (c1, c2))
     arm.set_grabber(0)
-    arm.move_to(*MOVE_POS)
-    arm.block_till_reach_target()
     arm.move_to(c1[0], *MOVE_POS[1:])
     arm.block_till_reach_target()
     arm.move_to(*c1, Z_ABOVE)
@@ -66,7 +67,8 @@ def move_piece(c1, c2):
     time.sleep(SETTLE_TIME)
     arm.move_to(c2[0], *MOVE_POS[1:])
     time.sleep(SETTLE_TIME)
-    arm.move_to(*MOVE_POS)
+    arm.move_to(*REST_POS)
+    arm.block_till_reach_target()
 
 def display_state():
     print('-'*10)
@@ -81,7 +83,7 @@ def make_move(move):
 
 def get_user_move(last_whites, last_blacks):
     #user is assumed to play as black [for now]
-    #global white_pieces, black_pieces
+    global white_pieces, black_pieces
     white_pieces, black_pieces = recognition.recognise(0)
     move_from = last_blacks & ~black_pieces
     move_to   = black_pieces & ~last_blacks
@@ -117,18 +119,33 @@ display_state()
 raise SystemExit
 '''
 arm = arm_lib.Arm(get_serial_port())
-time.sleep(2)
+#time.sleep(2) #serial line needs to settle
 arm.home()
 arm.block_till_reach_target()
-
-subprocess.run(['intelligence/chess_ai', 'white', chr(1), ''.join(''.join(r) for r in state)],stdout=subprocess.PIPE).stdout.strip()
-while 1:
-    display_state()
-    move = get_user_move(white_pieces[:], black_pieces[:])
-    print(move)
-    #rember to transpose for move_piece function
-    move_piece(move[1][::-1], move[0][::-1])
-    arm.move_to(*REST_POS)
-    input()
+arm.move_to(*REST_POS)
+arm.block_till_reach_target()
 
 display_state()
+comp_move = get_comp_move()
+print('computer plays: ', comp_move)
+make_move(comp_move)
+move_piece(comp_move[0][::-1], comp_move[1][::-1])
+display_state()
+arm.set_motors(0)
+
+while 1:
+    input('hit enter when you\'ve made a move...')
+    print('recognising board...')
+    user_move = get_user_move(white_pieces[:], black_pieces[:])
+    print('you played: ', user_move)
+    make_move(user_move)
+    display_state()
+    comp_move = get_comp_move()
+    print('computer plays: ', comp_move)
+    make_move(comp_move)
+    display_state()
+    #remember to transpose for move_piece function
+    move_piece(comp_move[0][::-1], comp_move[1][::-1])
+    arm.move_to(*REST_POS)
+    arm.block_till_reach_target()
+    arm.set_motors(0)
