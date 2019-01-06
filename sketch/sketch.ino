@@ -53,7 +53,7 @@
 #define SERVO_GRABBER  9
 
 //servo offsets (microseconds pulse widths)
-#define SERVO_OFFSET_FRNT -230
+#define SERVO_OFFSET_FRNT -240
 #define SERVO_OFFSET_BACK -640
 
 //grabber position in pulse widths
@@ -65,7 +65,7 @@
 #define SEGMENT_LENGTH_1 200
 #define SEGMENT_LENGTH_2 200
 #define GRIPPER_HEIGHT   50  //missed this in the old version!
-#define GRIPPER_LENGTH   40
+#define GRIPPER_LENGTH   60
 #define PIVOT_HEIGHT     60  //servo pivot height from ground
 
 //stepper direction macros
@@ -85,8 +85,8 @@
 #define NUM_ACCEL_OR_DECEL_STEPS (uint16_t) (ACCEL_AND_DECELERATION_DIST / STEP_DIST * STEP_MODE)
 
 //predefined arm positions
-//servo home position:  d, z
-#define SERVO_HOME    150, 50
+//servo home position:  d,  z
+#define SERVO_HOME    220,100
 #define X_IN_RANGE(x)   0<=(x) && (x)<=340
 #define Y_IN_RANGE(y) 100<=(y) && (y)<=450
 #define Z_IN_RANGE(z)   0<=(z) && (z)<=200
