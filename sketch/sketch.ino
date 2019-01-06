@@ -65,7 +65,7 @@
 #define SEGMENT_LENGTH_1 200
 #define SEGMENT_LENGTH_2 200
 #define GRIPPER_HEIGHT   50  //missed this in the old version!
-#define GRIPPER_LENGTH   60
+#define GRIPPER_LENGTH   35
 #define PIVOT_HEIGHT     60  //servo pivot height from ground
 
 //stepper direction macros
@@ -86,7 +86,7 @@
 
 //predefined arm positions
 //servo home position:  d,  z
-#define SERVO_HOME    220,100
+#define SERVO_HOME    180,100
 #define X_IN_RANGE(x)   0<=(x) && (x)<=340
 #define Y_IN_RANGE(y) 100<=(y) && (y)<=450
 #define Z_IN_RANGE(z)   0<=(z) && (z)<=200
