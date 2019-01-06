@@ -69,7 +69,8 @@ class Arm():
             raise Exception('Arduino return code != 1: '+ str(r))
     def _flush_serial(self):
         if self.serial.in_waiting:
-            print('WARNING: Unexpected message from Arduino: '+str(list(self.serial.read(self.serial.in_waiting))))
+            flushed = self.serial.read(self.serial.in_waiting)
+            #print('WARNING: Unexpected message from Arduino: ', list(flushed))
     def _write_and_check_success(self, message):
         self._flush_serial()
         self.serial.write(message)
