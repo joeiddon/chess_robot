@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <time.h>
 
 #include "common.h"
 #include "core.h"
@@ -11,6 +12,23 @@ const int8_t king_moves[8][2] = {{0,1},{0,-1},{1,0},{-1,0},{1,1},{-1,1},{1,-1},{
 
 //advantage given to occupation of these in evaluate
 const uint8_t centre_squares[4][2] = {{3,3},{3,4},{4,3},{4,4}};
+
+move_t deepening_search(state_t *state, int8_t side, uint8_t time_limit_s){
+    //implements iterative deepening whilst the time taken is less than the time_limit_s (seconds)
+    struct timespec start_time, cur_time;
+    clock_gettime(CLOCK_REALTIME, &start_time);
+    clock_gettime(CLOCK_REALTIME, &cur_time);
+    move_t best_move;
+    uint8_t depth = 0;
+    while (cur_time.tv_sec - start_time.tv_sec < time_limit_s){
+        //can get stuck doing a negamax call, so should pass a start time down the chain
+        //and then each call can check that it is within time
+        negamax(state, &best_move, side, ++depth, -INFINITY, INFINITY);
+        clock_gettime(CLOCK_REALTIME, &cur_time);
+    }
+    //printf("thought to depth: %d\n", depth);
+    return best_move;
+}
 
 int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, int16_t alpha, int16_t beta){
     //alpha should be initialised to -INFINITY; beta to INFINITY
@@ -29,7 +47,11 @@ int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, i
     order_moves(moves, num_moves, move_order);
     for (uint8_t i = 0; i < num_moves; i++){
         make_move(state, moves+move_order[i]); //pointer addition! - same as &moves[...]
-        int16_t score = -negamax(state, NULL, -side, depth-1, -beta, -alpha);
+        int16_t score = -negamax(state,
+                                 NULL,
+                                 -side,
+                                 depth-1, //>0?depth-1:(moves[move_order[i]].piece_taken?1:0), //if quiescence, terminate this branch, otherwise by 1
+                                 -beta, -alpha);
         inverse_move(state, moves+move_order[i]);
         if (score > best_score){
             best_score = score;
@@ -151,12 +173,12 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array){
             switch (ABS(state->pieces[r][c])){
                 case PAWN:
                     if (ON_BOARD(r+side,c)&&IS_EMPTY(r+side,c)){
-                        CALL_ADD_MOVE(r+side,c,IS_END_ROW(r+side,side),0,0);
+                        CALL_ADD_MOVE(r+side,c,r+side==BACK_ROW(side),0,0);
                         if(r==(side==WHITE?1:6)&&IS_EMPTY(r+2*side,c)) //double move
                         CALL_ADD_MOVE(r+2*side,c,0,0,0);
                     }
-                    if (ON_BOARD(r+side,c+1)&&IS_THEIRS(r+side,c+1)) CALL_ADD_MOVE(r+side,c+1,IS_END_ROW(r+side,side),0,0);
-                    if (ON_BOARD(r+side,c-1)&&IS_THEIRS(r+side,c-1)) CALL_ADD_MOVE(r+side,c-1,IS_END_ROW(r+side,side),0,0);
+                    if (ON_BOARD(r+side,c+1)&&IS_THEIRS(r+side,c+1)) CALL_ADD_MOVE(r+side,c+1,r+side==BACK_ROW(side),0,0);
+                    if (ON_BOARD(r+side,c-1)&&IS_THEIRS(r+side,c-1)) CALL_ADD_MOVE(r+side,c-1,r+side==BACK_ROW(side),0,0);
                     break;
                 case QUEEN:
                 case ROOK:
@@ -184,8 +206,10 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array){
                         //only says that this makes a castle invalid if is currently valid
                         CALL_ADD_MOVE(r+king_moves[i][0],c+king_moves[i][1],0,0,
                                       !GET_BIT(state->invalid_castles,KINGSIDE_BIT(side)));
+                        //TODO: ^broken!
                     }
-                    //castling
+                    //castling //TODO: \/ broken!
+                    /*
                     if (IS_EMPTY(BACK_ROW(side),5)&&IS_EMPTY(BACK_ROW(side),6)&&\
                         state->pieces[BACK_ROW(side)][7]==side*ROOK&&\
                         !GET_BIT(state->invalid_castles,KINGSIDE_BIT(side)))
@@ -195,7 +219,7 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array){
                         state->pieces[BACK_ROW(side)][0]==side*ROOK&&\
                         !GET_BIT(state->invalid_castles,QUEENSIDE_BIT(side)))
                     CALL_ADD_MOVE(r,c-2,0,QUEENSIDE,1);
-
+                    */
 
             }
         }

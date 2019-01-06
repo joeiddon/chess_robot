@@ -57,6 +57,8 @@ typedef struct {
     uint8_t is_pawn_promotion; //just 1 or 0; promotion assumed to be queen
     uint8_t castle; //KINGSIDE or QUEENSIDE; move postions (from,to) are that of king
     uint8_t makes_castle_invalid; //does it make a castle invalid? (for inverse_move)
+    //TODO: change this to another invalid_castles so know which one makes invalid
+    //      so we know which one to make invalid in the case of a piece taking something
 } move_t;
 
 typedef struct {

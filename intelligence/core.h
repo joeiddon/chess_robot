@@ -19,9 +19,6 @@
 //checks coordinate lies on board
 #define ON_BOARD(x,y) ((x)>=0&&(x)<8&&(y)>=0&&(y)<8)
 
-//is the row a pawn-promote row for the given side?
-#define IS_END_ROW(r,side) ((r)==((side)==WHITE?7:0))
-
 //begin impure #defines... (they assume variable names)
 
 //sees if a piece is on your side
@@ -58,5 +55,6 @@ void add_move(state_t *state, move_t *moves_array, uint8_t *moves, move_t move, 
 int16_t evaluate(state_t *state);
 int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, int16_t alpha, int16_t beta);
 int16_t order_moves(move_t *moves, uint8_t num_moves, uint8_t *order);
+move_t  deepening_search(state_t *state, int8_t side, uint8_t time_limit_s);
 
 #endif

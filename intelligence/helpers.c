@@ -98,6 +98,18 @@ void inverse_move(state_t *state, move_t *move){
     }
 }
 
+move_t get_user_move_instance(state_t *state, uint8_t fr, uint8_t fc, uint8_t tr, uint8_t tc){
+    //calculates (guesses) the additional move members from the state and the {fr,fc}=>{tr,tc} info
+    //then makes that move on the state
+    uint8_t side = state->pieces[fr][fc] > 0 ? WHITE : BLACK;
+    move_t player_move = {{fr,fc}, {tr,tc},
+                          state->pieces[tr][tc], //piece_taken
+                          ABS(state->pieces[tr][tc])==PAWN && tr==BACK_ROW(side), //is_pawn_promotion
+                          ABS(state->pieces[fr][fc])==KING && ABS(tc-fc)==2, //castle
+                          0}; //just leaving as "doesn't make castle invalid as that part of the struct will need some thought
+    return player_move;
+}
+
 void print_negamax_route(state_t *state, move_t *best_move, int8_t side, uint8_t depth){
     //To see what negamax had in mind, we sequentially make the best move for the given
     //depth and then decrease the depth by 1 and make the best move for the other side

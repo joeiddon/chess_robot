@@ -7,7 +7,6 @@
 
 
 //standard start start
-/*
 state_t state = {{{ ROOK,  KNIGHT,  BISHOP,  QUEEN,  KING,  BISHOP,  KNIGHT,  ROOK},
                   { PAWN,    PAWN,    PAWN,   PAWN,  PAWN,    PAWN,    PAWN,  PAWN},
                   {    0,       0,       0,      0,     0,       0,       0,     0},
@@ -16,8 +15,7 @@ state_t state = {{{ ROOK,  KNIGHT,  BISHOP,  QUEEN,  KING,  BISHOP,  KNIGHT,  RO
                   {    0,       0,       0,      0,     0,       0,       0,     0},
                   {-PAWN,   -PAWN,   -PAWN,  -PAWN, -PAWN,   -PAWN,   -PAWN, -PAWN},
                   {-ROOK, -KNIGHT, -BISHOP, -QUEEN, -KING, -BISHOP, -KNIGHT, -ROOK}}, 0};
-*/
-
+/*
 //complicated state to test analyse generate_moves() and other things
 state_t state = {{{ ROOK,       0,       0,      0,  KING,  BISHOP,  KNIGHT,  ROOK},
                   {    0,    PAWN,       0, BISHOP,  PAWN,    PAWN,       0,  PAWN},
@@ -27,7 +25,7 @@ state_t state = {{{ ROOK,       0,       0,      0,  KING,  BISHOP,  KNIGHT,  RO
                   {    0,       0,   -PAWN,      0, -PAWN,       0,       0,     0},
                   {    0,       0,       0,  -PAWN,     0,   -PAWN,       0, -PAWN},
                   {-ROOK, -KNIGHT, -BISHOP,      0, -KING,       0, -KNIGHT, -ROOK}}, 0};
-
+*/
 /*
 //tests castling
 state_t state = {{{ ROOK,  0,            0,   0,  KING,  BISHOP,  KNIGHT,  ROOK},
@@ -41,8 +39,8 @@ state_t state = {{{ ROOK,  0,            0,   0,  KING,  BISHOP,  KNIGHT,  ROOK}
 */
 
 void main(){
-    printf("starting with state:\n");
-    print_state(&state);
+    //printf("starting with state:\n");
+    //print_state(&state);
 
     /*
     //note: these moves aren't all valid, they test the make_move() and inverse_move functions
@@ -84,21 +82,47 @@ void main(){
     //printf("evaluation for white: %d\n",  evaluate(&state));
     //printf("evaluation for black: %d\n", -evaluate(&state));
 
+    /*
     move_t best_move;
-    int16_t end_score = negamax(&state, &best_move, WHITE, 6, -INFINITY, INFINITY);
+    int16_t end_score = negamax(&state, &best_move, WHITE, 5, -INFINITY, INFINITY);
     printf("best move for white:\n");
     print_move(&best_move);
     printf("yielding an eventual evaluation of: %d\n", end_score);
     //print_state(&state);
+    */
 
     //print_negamax_route(&state, NULL, WHITE, 5);
 
-    /*
+    move_t best_move = deepening_search(&state, WHITE, 2);
+    print_move(&best_move);
+
+/*
+    //begin code for console-based chess game...
+#define PLAYER_SIDE WHITE
+
+    move_t valid_user_moves[MAX_NUM_MOVES];
+    uint8_t num_valid_user_moves;
+    uint8_t users_move_is_valid = 0;
+    //if (PLAYER_SIDE == BLACK){
+    //    ...
+
     while (1){
+        num_valid_user_moves = generate_moves(&state, PLAYER_SIDE, valid_user_moves);
         printf("what move? format fr,fc,tr,tc\n");
         uint8_t fr, fc, tr, tc;
         scanf("%hhu,%hhu,%hhu,%hhu", &fr, &fc, &tr, &tc);
-        move_t my_move = {{fr, fc}, {tr, tc}, 0, 0, 0, 0}; 
+        move_t my_move = get_user_move_instance(&state, fr, fc, tr, tc);
+        users_move_is_valid = 0;
+        for (uint8_t i = 0; i < num_valid_user_moves; i++){
+            if (valid_user_moves[i].from[0] == fr && valid_user_moves[i].from[1] == fc && \
+                valid_user_moves[i].to[0] == tr && valid_user_moves[i].to[1] == tc){
+                users_move_is_valid = 1;
+                break;
+            }
+        }
+        printf("that move is invalid!\n");
+        if (!users_move_is_valid) continue;
+        printf("your move is valid\n");
         make_move(&state, &my_move);
         print_move(&my_move);
         print_state(&state);
