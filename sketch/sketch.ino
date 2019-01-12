@@ -25,7 +25,7 @@
   0           | home            | 0    | N/A
   1           | motor state     | 1    | (0/1 => disable/enable)
   2           | set grabber     | 1    | (0/1 => grab off/grab on
-  3           | move position   | 6    | (x: [0¬340, y: [100¬450], z: [0¬200])
+  3           | move position   | 6    | (x: [0¬335, y: [100¬450], z: [0¬200])
                                           ^          ^             ^
        these uint16s (actually casted to signed) are sent *little-endian* (see INT_FROM_BYTES)
 
@@ -88,7 +88,7 @@
 //predefined arm positions
 //servo home position:  d,  z
 #define SERVO_HOME    180,100
-#define X_IN_RANGE(x)   0<=(x) && (x)<=340
+#define X_IN_RANGE(x)   0<=(x) && (x)<=335
 #define Y_IN_RANGE(y) 100<=(y) && (y)<=450
 #define Z_IN_RANGE(z)   0<=(z) && (z)<=200
 

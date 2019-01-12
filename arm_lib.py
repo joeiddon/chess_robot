@@ -10,7 +10,7 @@ import serial, os.path
   0           | home            | 0    | N/A
   1           | motor state     | 1    | (0/1 => disable/enable)
   2           | set grabber     | 1    | (0/1 => grab off/grab on
-  3           | move position   | 6    | (x: [0¬340, y: [100¬450], z: [0¬200])
+  3           | move position   | 6    | (x: [0¬335, y: [100¬450], z: [0¬200])
                                           ^          ^             ^
        these uint16s (actually casted to signed) are sent *little-endian* (see INT_FROM_BYTES)
 
@@ -26,7 +26,7 @@ import serial, os.path
 
 
 
-LIMITS = {'x': (0, 340),
+LIMITS = {'x': (0, 335),
           'y': (100, 450),
           'z': (0, 200)}
 
