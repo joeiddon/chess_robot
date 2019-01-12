@@ -9,3 +9,4 @@ stepper acceleration control working with array to store pulse widths
 chess ai written in C
 servo offsets are key if arm not quite getting to where supposed to :)
 working to level where I can play it now - lot's needs improving though
+changed serial protocol to send number of bytes first instead of a terminal 0xff byte
