@@ -18,8 +18,9 @@
 
 ==Joe's Serial Protocol==
   Runs at a baud rate of 115200 pulses per second.
-  First byte is message type; last byte is a full terminater byte (0xff).
-  The number of enclosed bytes (NEBs) is dependent on the message type.
+  The number of bytes in the message is sent first.
+  The next byte represents the message type.
+  The following number of enclosed bytes (NEBs) is dependent on the message type.
   First byte  | Message (type)  | NEBs | Enclosed bytes meaning
   0           | home            | 0    | N/A
   1           | motor state     | 1    | (0/1 => disable/enable)
@@ -123,6 +124,7 @@ uint16_t pulse_interval_us;
 
 //serial
 uint8_t serial_buffer[BUF_LENGTH];
+uint8_t msg_bytes = 0;
 uint8_t buf_pointer = 0;
 
 //experimental/debug variables
@@ -158,16 +160,15 @@ void loop() {
     //around as fast as possible for the stepper steps
     if (Serial.available()){
         uint8_t b = Serial.read();
-        if (b == 0xff){
-            handle_message(); //remember to reply here
-            buf_pointer = 0;
-        } else {
-            if (buf_pointer < BUF_LENGTH) {
-                serial_buffer[buf_pointer++] = b;
-            } else {
-                buf_pointer = 0;  //reset buf_pointer to start
-                Serial.write(CODE_INVALID_NEBS); //message too long
+        if (msg_bytes){ //we are mid-message...
+            serial_buffer[buf_pointer++] = b;
+            if (buf_pointer == msg_bytes){
+                handle_message();
+                msg_bytes = 0;
             }
+        } else { //first byte of a message...
+            msg_bytes = b;
+            buf_pointer = 0;
         }
     }
     //if not at stepper target and due to pulse, let's pulse
@@ -234,14 +235,14 @@ uint16_t smootherstep_interp(float x, int16_t a, int16_t b){
 void handle_message(){
     switch (serial_buffer[0]){
         case 0: //home
-            if (buf_pointer == 1){
+            if (msg_bytes == 1){
                 Serial.write(CODE_NORMAL);
                 go_home();
             } else {
                 Serial.write(CODE_INVALID_NEBS);
             } break;
         case 1: //set motors
-            if (buf_pointer == 2){
+            if (msg_bytes == 2){
                 if (serial_buffer[1]) enable_motors();
                 else disable_motors();
                 Serial.write(CODE_NORMAL);
@@ -249,14 +250,14 @@ void handle_message(){
                 Serial.write(CODE_INVALID_NEBS);
             } break;
         case 2: //set grabber
-            if (buf_pointer == 2){
+            if (msg_bytes == 2){
                 Serial.write(CODE_NORMAL);
                 set_grabber(serial_buffer[1]);
             } else {
                 Serial.write(CODE_INVALID_NEBS);
             } break;
         case 3: //move to
-            if (buf_pointer == 7){
+            if (msg_bytes == 7){
                 int16_t x = INT_FROM_BYTES(serial_buffer[1], serial_buffer[2]),
                         y = INT_FROM_BYTES(serial_buffer[3], serial_buffer[4]),
                         z = INT_FROM_BYTES(serial_buffer[5], serial_buffer[6]);

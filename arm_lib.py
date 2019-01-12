@@ -1,12 +1,11 @@
 import serial, os.path
 
-#TODO: COPY IN THE FULL PROTOCOL FROM THE SKETCH
-
 """
 ==Joe's Serial Protocol==
   Runs at a baud rate of 115200 pulses per second.
-  First byte is message type; last byte is a full terminater byte (0xff).
-  The number of enclosed bytes (NEBs) is dependent on the message type.
+  The number of bytes in the message is sent first.
+  The next byte represents the message type.
+  The following number of enclosed bytes (NEBs) is dependent on the message type.
   First byte  | Message (type)  | NEBs | Enclosed bytes meaning
   0           | home            | 0    | N/A
   1           | motor state     | 1    | (0/1 => disable/enable)
@@ -22,7 +21,10 @@ import serial, os.path
   2           | Invalid request structure (wrong NEBs)
   3           | Task failed due to invalid input ranges
   4           | Unkown request type
+
 """
+
+
 
 LIMITS = {'x': (0, 340),
           'y': (100, 450),
@@ -40,15 +42,15 @@ class Arm():
     def home(self):
         '''Moves the arm to its home position which is
         defined on the Arduino's side.'''
-        self._write_and_check_success([0, 0xff])
+        self._write_and_check_success([1, 0])
     def set_motors(self, state):
         '''Enables or disables the stepper and servo motors on the arm.
             - state <= boolean: True=enable; False=disable'''
-        self._write_and_check_success([1, state, 0xff])
+        self._write_and_check_success([2, 1, state])
     def set_grabber(self, state):
         '''Sets the state of the grabber on the arm's effector.
             - state <= boolean: True=grab on; False=grab off'''
-        self._write_and_check_success([2, state, 0xff])
+        self._write_and_check_success([2, 2, state])
     def move_to(self, x, y, z):
         '''Moves the arm to the specified coordinate; given in millimeters.'''
         if not (LIMITS['x'][0] <= x <= LIMITS['x'][1] and \
@@ -57,11 +59,10 @@ class Arm():
             raise ValueError('Position '+str([x,y,z])+' out of limits.')
         if not (type(x) == type(y) == type(z) == int):
             raise TypeError('Parameters: x,y,z must be integers!')
-        self._write_and_check_success([3,
+        self._write_and_check_success([7, 3,
                                        *self._bytes_from_int(x),
                                        *self._bytes_from_int(y),
-                                       *self._bytes_from_int(z),
-                                       0xff])
+                                       *self._bytes_from_int(z)])
     def block_till_reach_target(self):
         '''Waits till x_pos reaches next x_target. Blocking.'''
         r = self.serial.read()[0]
@@ -73,7 +74,7 @@ class Arm():
         r = self.serial.read()[0]
         if r != 0:
             raise Exception('Arduino code non-zero when sending: '+str(message)+ \
-                            'It replied with: '+str(r))
+                            ', it replied with: '+str(r))
     def _connect_to_arduino(self):
         try:
             self.serial = serial.Serial(self.port, 115200);
