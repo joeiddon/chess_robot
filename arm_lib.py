@@ -39,6 +39,7 @@ class Arm():
             - port <= serial port string'''
         self.port = port
         self._connect_to_arduino()
+        self.serial.flushInput()
     def home(self):
         '''Moves the arm to its home position which is
         defined on the Arduino's side.'''
