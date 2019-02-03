@@ -9,18 +9,25 @@ import arm_lib, recognition
 warnings.simplefilter('ignore')
 
 #positions of chess board
-X_SIDES = 130
-Y_CLOSE = 185
+#note sides are to centres of edge pieces
+X_LEFT  =  14
+X_RIGHT = 260 + X_LEFT
+Y_CLOSE = 195
 Y_FAR   = 431
 Z_PIECE =  35
 Z_ABOVE = 100
 
-#position to go to between moves
-MOVE_POS = (int(arm_lib.LIMITS['x'][1]/2),
+#position to go to during moves
+MOVE_POS = (int((X_LEFT + X_RIGHT)/2),
             int((Y_CLOSE + Y_FAR)/2),
-            100)
+            130)
+#position to go to between moves
+REST_POS = (arm_lib.LIMITS['x'][1], *MOVE_POS[1:])
 
-REST_POS = (arm_lib.LIMITS['x'][1]-5, *MOVE_POS[1:])
+#position of piece pot
+POT_Y_DIST = 400
+POT_Z_ABOVE = 170
+POT_Z_IN = 80
 
 #timing, in seconds
 SETTLE_TIME = 0.9 #time for servos to move and settle
@@ -35,40 +42,89 @@ def get_serial_port():
            input('Which serial port from:' + str(ser_ports) +'? ')
 
 def get_piece_coordinate(x,y):
-    '''Maps between piece coordinates [0-8,0-8] to arm coordinates in mm'''
+    '''maps between piece coordinates [0-8,0-8] to arm coordinates in mm'''
     if not (0 <= x < 8 and 0 <= y < 8): raise ValueError('Piece coord out of range!')
-    return (int(arm_lib.LIMITS['x'][1] / 2- X_SIDES + x/7 * 2 * X_SIDES),
+    return (int(X_LEFT  + x/7 * (X_RIGHT - X_LEFT)),
             int(Y_CLOSE + y/7 * (Y_FAR - Y_CLOSE)))
 
+def calibrate():
+    '''servos need a bit of 'warming up', so a little calibration routine'''
+    #should have added more move calls here, but only hacky for now
+    for p in [[7,0],[7,7]]:
+        print(*get_piece_coordinate(*p), MOVE_POS[2])
+        arm.move_to(*get_piece_coordinate(*p), MOVE_POS[2])
+        time.sleep(SETTLE_TIME)
+        arm.block_till_reach_target()
+        arm.move_to(*MOVE_POS)
+        time.sleep(SETTLE_TIME)
+        arm.block_till_reach_target()
+
 def move_piece(c1, c2):
+    '''moves piece from c1 -> c2, note coords in x,y NOT r,c format'''
     c1, c2 = (get_piece_coordinate(*c) for c in (c1, c2))
-    arm.set_grabber(0)
-    arm.move_to(c1[0], *MOVE_POS[1:])
+    arm.set_grabber(0)                  #open grabber
+    arm.move_to(c1[0], *MOVE_POS[1:])   #move to column of it
     arm.block_till_reach_target()
-    arm.move_to(*c1, Z_ABOVE)
+    arm.move_to(*c1, Z_ABOVE)           #move above it
     time.sleep(SETTLE_TIME)
-    arm.move_to(*c1, Z_PIECE)
+    arm.move_to(*c1, Z_PIECE)           #move to it
     time.sleep(SETTLE_TIME)
-    arm.set_grabber(1)
+    arm.set_grabber(1)                  #grab it
     time.sleep(GRAB_TIME)
-    arm.move_to(*c1, Z_ABOVE);
+    arm.move_to(*c1, Z_ABOVE)           #move above it
     time.sleep(SETTLE_TIME)
-    arm.move_to(c1[0], *MOVE_POS[1:])
+    arm.move_to(c1[0], *MOVE_POS[1:])   #move to centre on it's column
     time.sleep(SETTLE_TIME)
-    arm.move_to(c2[0], *MOVE_POS[1:])
+    arm.move_to(c2[0], *MOVE_POS[1:])   #move to centre on end's column
     arm.block_till_reach_target()
-    arm.move_to(*c2, Z_ABOVE);
+    arm.move_to(*c2, Z_ABOVE)           #move above end pos
     time.sleep(SETTLE_TIME)
-    arm.move_to(*c2, Z_PIECE);
+    arm.move_to(*c2, Z_PIECE)           #move to end pos
     time.sleep(SETTLE_TIME)
-    arm.set_grabber(0)
+    arm.set_grabber(0)                  #release at end pos
     time.sleep(GRAB_TIME)
-    arm.move_to(*c2, Z_ABOVE);
+    arm.move_to(*c2, Z_ABOVE);          #move above end pos
     time.sleep(SETTLE_TIME)
-    arm.move_to(c2[0], *MOVE_POS[1:])
+    arm.move_to(c2[0], *MOVE_POS[1:])   #move to centre on end's column
     time.sleep(SETTLE_TIME)
-    arm.move_to(*REST_POS)
+    arm.move_to(*REST_POS)              #move to rest pos
     arm.block_till_reach_target()
+
+def take_piece(c):
+    '''takes piece at coordinate c, note in x.y NOT r,c format'''
+    c = get_piece_coordinate(*c)
+    arm.set_grabber(0)                  #open grabber
+    arm.move_to(c[0], *MOVE_POS[1:])    #move to column above piece
+    arm.block_till_reach_target()
+    arm.move_to(*c, Z_ABOVE)            #move above it
+    time.sleep(SETTLE_TIME)
+    arm.move_to(*c, Z_PIECE)            #move to it
+    time.sleep(SETTLE_TIME)
+    arm.set_grabber(1)                  #grab their piece (take it)
+    time.sleep(GRAB_TIME)
+    arm.move_to(*c, Z_ABOVE)            #move above it
+    time.sleep(SETTLE_TIME)
+    arm.move_to(c[0], *MOVE_POS[1:])    #move to centre on it's column
+    time.sleep(SETTLE_TIME)
+    arm.move_to(*REST_POS)              #move to rest pos
+    arm.block_till_reach_target()
+    arm.move_to(REST_POS[0],            #move above pot
+                POT_Y_DIST,
+                POT_Z_ABOVE)
+    time.sleep(SETTLE_TIME)
+    arm.move_to(REST_POS[0],            #move in pot
+                POT_Y_DIST,
+                POT_Z_IN)
+    time.sleep(SETTLE_TIME)
+    arm.set_grabber(0)                  #release piece
+    time.sleep(GRAB_TIME)
+    arm.move_to(REST_POS[0],            #move above pot
+                POT_Y_DIST,
+                POT_Z_ABOVE)
+    time.sleep(SETTLE_TIME)
+    arm.move_to(*REST_POS)              #move to rest pos
+    time.sleep(SETTLE_TIME)
+
 
 def display_state():
     print('-'*10)
@@ -77,18 +133,24 @@ def display_state():
     print('  '+''.join(str(i) for i in range(8))+'\n'+'-'*10)
 
 def make_move(move):
-    #makes a move to the state
+    '''makes a move to the state and maybe black_pieces/white_pieces'''
     state[move[1][0]][move[1][1]] = state[move[0][0]][move[0][1]]
     state[move[0][0]][move[0][1]] = ' '
 
 def get_user_move(last_whites, last_blacks):
     #user is assumed to play as black [for now]
     global white_pieces, black_pieces
-    white_pieces, black_pieces = recognition.recognise(0)
-    move_from = last_blacks & ~black_pieces
-    move_to   = black_pieces & ~last_blacks
+    this_whites, this_blacks = recognition.recognise(0)
+    #last condition required for when white takes
+    move_from = last_blacks & ~this_blacks & ~this_whites
+    move_to   = this_blacks & ~last_blacks  ###this needs fixing for when black takes a white piece!
     if np.sum(move_from) + np.sum(move_to) != 2:
-        raise Exception('wrong number of pieces changes')
+        print('move from', move_from)
+        print('move to', move_to)
+        raise Exception('wrong number of pieces changed')
+    else:
+        white_pieces = this_whites
+        black_pieces = this_blacks
     return [[b[0] for b in np.where(a)] for a in [move_from, move_to]]
 
 def get_comp_move():
@@ -119,9 +181,13 @@ display_state()
 raise SystemExit
 '''
 arm = arm_lib.Arm(get_serial_port())
-#time.sleep(2) #serial line needs to settle
-arm.home()
+try:
+    arm.home()
+except:
+    pass #arduino "skips a beat" occasionally so pass silently
 arm.block_till_reach_target()
+
+calibrate()
 arm.move_to(*REST_POS)
 arm.block_till_reach_target()
 
@@ -136,15 +202,23 @@ arm.set_motors(0)
 while 1:
     input('hit enter when you\'ve made a move...')
     print('recognising board...')
-    user_move = get_user_move(white_pieces[:], black_pieces[:])
+    try:
+        user_move = get_user_move(white_pieces[:], black_pieces[:])
+    except:
+        print('recognition error')
+        if input('show what I\'m seeing? y/n\n') == 'y': recognition.recognise(1)
+        continue
     print('you played: ', user_move)
     make_move(user_move)
     display_state()
     comp_move = get_comp_move()
+    comp_is_take = state[comp_move[1][0]][comp_move[1][1]] != ' '
     print('computer plays: ', comp_move)
     make_move(comp_move)
     display_state()
-    #remember to transpose for move_piece function
+    #must transpose for move_piece and take_piece funcs
+    if comp_is_take:
+        take_piece(comp_move[1][::-1])
     move_piece(comp_move[0][::-1], comp_move[1][::-1])
     arm.move_to(*REST_POS)
     arm.block_till_reach_target()

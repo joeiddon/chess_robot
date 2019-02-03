@@ -17,9 +17,9 @@ def recognise(display=False):
 
     #detection thresholds
     white_pix_thresh = 95  #threshold for pix to count as white
-    black_pix_thresh = 44  #threshold for pix to count as black
-    white_pix_no = 3      #number of white threshed pixels for piece
-    black_pix_no = 3      #number of black threshed pixels for piece
+    black_pix_thresh = 45  #threshold for pix to count as black
+    white_pix_no = 2      #number of white threshed pixels for piece
+    black_pix_no = 2      #number of black threshed pixels for piece
 
     #pixels of each edge of chess board
     #(hard coded because board's position must be fixed anyway for arm)
