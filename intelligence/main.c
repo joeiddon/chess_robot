@@ -114,7 +114,7 @@ void main(int argc, char** argv){
             printf("your move is valid\n");
             make_move(&state, &user_move);
             if (is_checkmated(&state,BLACK)){
-                printf("checkmate\n");
+                printf("black checkmated\n");
                 return;
             }
             print_move(&user_move);
@@ -128,7 +128,7 @@ void main(int argc, char** argv){
             print_state(&state);
             printf("evaluation for white is: %d\n", evaluate(&state));
             if (is_checkmated(&state,WHITE)){
-                printf("checkmate\n");
+                printf("white checkmated\n");
                 return;
             }
         }
