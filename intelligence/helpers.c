@@ -7,8 +7,6 @@
 #include "core.h"
 
 static char piece_chars[7] = {' ','p','r','n','b','q','k'};
-static char *state_invalid_castles_words[4] = {"white kingside","white queenside",\
-                                               "black kingside","black queenside"};
 
 void print_state(state_t *state){
     //white pieces are uppper case, black pieces lower case
@@ -24,37 +22,22 @@ void print_state(state_t *state){
         }
         printf("\n------------------\n");
     }
-    printf(" |0|1|2|3|4|5|6|7|\nallowed castle moves:\n");
-    for (uint8_t i = 0; i < 4; i++){
-        if (!GET_BIT(state->invalid_castles,i)){
-            printf("- %s\n", state_invalid_castles_words[i]);
-        }
-    }
-    printf("------------------\n");
+    printf(" |0|1|2|3|4|5|6|7|\n------------------\n");
 }
 
 
 void print_move(move_t *move){
-    printf("move [%d,%d] => [%d,%d], takes: %c, pawn promote? %d, castle? %s, makes_castle_invalid? %d\n", \
+    printf("move [%d,%d] => [%d,%d], takes: %c, pawn promote? %d\n", \
       move->from[0], move->from[1], move->to[0], move->to[1], \
       move->piece_taken>0?CHANGE_CASE(piece_chars[move->piece_taken]):piece_chars[-move->piece_taken], \
-      move->is_pawn_promotion, move->castle?(move->castle==KINGSIDE?"kingside":"queenside"):"no", \
-      move->makes_castle_invalid);
+      move->is_pawn_promotion);
 }
 
 void make_move(state_t *state, move_t *move){
-    //does not insure move is legal!
+    //note: does not insure move is legal
     int8_t side = state->pieces[MOVE_FROM] > 0 ? WHITE : BLACK;
-    if (move->castle){
-        //special case: castling (note: move->from must target the right kind for side)
-        //move king...
-        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?6:2] = side*KING;
-        state->pieces[BACK_ROW(side)][4] = 0;
-        //move castle...
-        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?5:3] = side*ROOK;
-        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?7:0] = 0;
-    } else if (move->is_pawn_promotion){
-        //special case: pawn promotion (auto to queen :)
+    if (move->is_pawn_promotion){
+        //pawn promotion (auto to queen :)
         state->pieces[MOVE_TO] = side*QUEEN;
         state->pieces[MOVE_FROM] = 0;
     } else {
@@ -62,27 +45,13 @@ void make_move(state_t *state, move_t *move){
         state->pieces[MOVE_TO] = state->pieces[MOVE_FROM];
         state->pieces[MOVE_FROM] = 0;
     }
-    if (move->makes_castle_invalid){
-        if (move->from[1]==7 || move->from[1]==4)
-        SET_BIT_HIGH(state->invalid_castles,KINGSIDE_BIT(side));
-        if (move->from[1]==0 || move->from[1]==4)
-        SET_BIT_HIGH(state->invalid_castles,QUEENSIDE_BIT(side));
-    }
 }
 
 void inverse_move(state_t *state, move_t *move){
     //does the move from to->from
     int8_t side = state->pieces[MOVE_TO] > 0 ? WHITE : BLACK;
-    if (move->castle){
-        //special case: castling
-        //move king...
-        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?6:2] = 0;
-        state->pieces[BACK_ROW(side)][4] = side*KING;
-        //move castle...
-        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?5:3] = 0;
-        state->pieces[BACK_ROW(side)][move->castle==KINGSIDE?7:0] = side*ROOK;
-    } else if (move->is_pawn_promotion){
-        //special case: pawn promotion (auto to queen :)
+    if (move->is_pawn_promotion){
+        //pawn promotion (auto to queen :)
         state->pieces[MOVE_TO] = move->piece_taken;
         state->pieces[MOVE_FROM] = side*PAWN;
     } else {
@@ -90,25 +59,19 @@ void inverse_move(state_t *state, move_t *move){
         state->pieces[MOVE_FROM] = state->pieces[MOVE_TO];
         state->pieces[MOVE_TO] = move->piece_taken;
     }
-    if (move->makes_castle_invalid){
-        if (move->from[1]==7 || move->from[1]==4)
-        SET_BIT_LOW(state->invalid_castles,KINGSIDE_BIT(side));
-        if (move->from[1]==0 || move->from[1]==4)
-        SET_BIT_LOW(state->invalid_castles,QUEENSIDE_BIT(side));
-    }
 }
 
 move_t get_user_move_instance(state_t *state, uint8_t fr, uint8_t fc, uint8_t tr, uint8_t tc){
-    //calculates (guesses) the additional move members from the state and the {fr,fc}=>{tr,tc} info
-    //then makes that move on the state
+    //creates a move_t instance based on {fr,fc}=>{tr,tc}
+    //fills in the piece_taken and is_pawn_promotion attrs. automatically by checking the state
     uint8_t side = state->pieces[fr][fc] > 0 ? WHITE : BLACK;
     move_t player_move = {{fr,fc}, {tr,tc},
                           state->pieces[tr][tc], //piece_taken
-                          ABS(state->pieces[tr][tc])==PAWN && tr==BACK_ROW(side), //is_pawn_promotion
-                          ABS(state->pieces[fr][fc])==KING && ABS(tc-fc)==2, //castle
-                          0}; //just leaving as "doesn't make castle invalid as that part of the struct will need some thought
+                          ABS(state->pieces[tr][tc])==PAWN && tr==BACK_ROW(side)}; //is_pawn_promotion
     return player_move;
 }
+
+// the following are NOT used in production...
 
 void print_negamax_route(state_t *state, move_t *best_move, int8_t side, uint8_t depth){
     //To see what negamax had in mind, we sequentially make the best move for the given
@@ -136,7 +99,7 @@ void print_negamax_route(state_t *state, move_t *best_move, int8_t side, uint8_t
         make_move(state, move_pointer);
         print_move(move_pointer);
         print_state(state);
-        move_pointer+=1;
+        move_pointer++;
     }
     //iterate over the move_route array backwatds, undoing the moves to reset the state
     move_pointer = move_route+depth;

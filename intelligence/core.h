@@ -13,13 +13,25 @@
 //max score for check mates and stalemates
 #define INFINITY (32767)
 
+//number of pieces left before early game over
+#define EARLY_GAME_PIECE_THRESH 24
+
 //points per centre square
 #define CENTRE_POWER (40)
+
+//scaling factor for king position
+//max influence is 4 * this
+#define KING_POS_POWER (30)
 
 //checks coordinate lies on board
 #define ON_BOARD(x,y) ((x)>=0&&(x)<8&&(y)>=0&&(y)<8)
 
-//begin impure #defines... (they assume variable names)
+//gets distance of a coordinate-component from centre
+#define CENTRE_DIST(c) (MIN(ABS(4-(c)),ABS(3-(c))))
+
+//gets distance between two coordinates
+
+//begin impure (hacky) #defines... (they assume variable names)
 
 //sees if a piece is on your side
 #define IS_MINE(r,c) (side*state->pieces[(r)][(c)]>0)
@@ -33,17 +45,14 @@
                                    if (state->pieces[(r)][(c)] != 0) break;
 
 ///calls add_move() with the appropriate variables; move.from assumed to be {r,c} and piece taken and move.to is {(i),(j)}
-//(p) is pawn promote; (ca) is castling; (m) is if makes castling invalid
-#define CALL_ADD_MOVE(i,j,p,ca,m) add_move(state, moves_array, &num_moves, \
-                                           (move_t){{r,c},{(i),(j)},state->pieces[(i)][(j)],(p),(ca),(m)}, side)
+//(p) is whether move is a pawn_promote pawn promote
+#define CALL_ADD_MOVE(i,j,p) add_move(state, moves_array, &num_moves, \
+                                           (move_t){{r,c},{(i),(j)},state->pieces[(i)][(j)],(p)}, side)
 
 //again this just shortens the generate_moves() code...  NOT A FUNCTION-LIKE MACRO, again
-#define MOVES_SLIDING_PIECE(i,j,m) if (state->pieces[(i)][(j)] == 0){CALL_ADD_MOVE((i),(j),0,0,(m));} \
-                                   else if (IS_THEIRS((i),(j))){CALL_ADD_MOVE((i),(j),0,0,(m));break;} \
+#define MOVES_SLIDING_PIECE(i,j) if (state->pieces[(i)][(j)] == 0){CALL_ADD_MOVE((i),(j),0);} \
+                                   else if (IS_THEIRS((i),(j))){CALL_ADD_MOVE((i),(j),0);break;} \
                                    else break;
-
-//this is super hacky, but if, when moving a rook, it was valid to castle, we give 1 - it makes_castle_invalid, otherwise, 0
-#define DOES_BREAK_CASTLE (!GET_BIT(state->invalid_castles,c==7?KINGSIDE_BIT(side):QUEENSIDE_BIT(side)))
 
 //...end impure hash_defines
 

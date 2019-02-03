@@ -91,3 +91,4 @@ My implementation for the negamax algorithm along with the simplistic `order_mov
 
 - No En-Passant.
 - Auto queen-promotion for all pawns.
+- No castling (I tried in [b5be2e8](https://github.com/joeiddon/chess_robot/commit/b5be2e8) but they're were so many bugs for little gain that I scrapped it).

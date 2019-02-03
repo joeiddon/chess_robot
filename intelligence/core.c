@@ -15,7 +15,7 @@ const uint8_t centre_squares[4][2] = {{3,3},{3,4},{4,3},{4,4}};
 
 move_t deepening_search(state_t *state, int8_t side, uint8_t time_limit_s){
     //implements iterative deepening whilst the time taken is less than the time_limit_s (seconds)
-    struct timespec start_time, cur_time;
+    struct timespec start_time, cur_time; //*.tv_sec stands for "time value [in] seconds"
     clock_gettime(CLOCK_REALTIME, &start_time);
     clock_gettime(CLOCK_REALTIME, &cur_time);
     move_t best_move;
@@ -23,7 +23,9 @@ move_t deepening_search(state_t *state, int8_t side, uint8_t time_limit_s){
     while (cur_time.tv_sec - start_time.tv_sec < time_limit_s){
         //can get stuck doing a negamax call, so should pass a start time down the chain
         //and then each call can check that it is within time
-        negamax(state, &best_move, side, ++depth, -INFINITY, INFINITY);
+        //printf("time to search to depth: %d\n", depth);
+        int16_t s = negamax(state, &best_move, side, ++depth, -INFINITY, INFINITY);
+        if (s == -side*INFINITY) break;
         clock_gettime(CLOCK_REALTIME, &cur_time);
     }
     //printf("thought to depth: %d\n", depth);
@@ -43,10 +45,19 @@ int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, i
     int16_t best_score = -INFINITY;
     move_t moves[MAX_NUM_MOVES];
     uint8_t num_moves = generate_moves(state, side, moves);
+    if (num_moves == 0) return side*INFINITY;
     uint8_t move_order[MAX_NUM_MOVES]; //array of indicies
     order_moves(moves, num_moves, move_order);
     for (uint8_t i = 0; i < num_moves; i++){
         make_move(state, moves+move_order[i]); //pointer addition! - same as &moves[...]
+        /*
+        if (is_checkmated(state, -side)){
+            printf("checkmating move found, returning\n");
+            inverse_move(state, moves+move_order[i]);
+            if (best_move != NULL) *best_move = moves[move_order[i]];
+            return INFINITY * side;
+        }
+        */
         int16_t score = -negamax(state,
                                  NULL,
                                  -side,
@@ -58,8 +69,7 @@ int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, i
             if (best_move != NULL) *best_move = moves[move_order[i]];
         }
         if (best_score > alpha) alpha = best_score;
-        if (alpha >= beta) { //prune tree as we have found a score we can be sure of achieving better than their best score
-        /*printf("branching factor: %d\n", i);*/return alpha;}
+        if (alpha >= beta) return alpha;
     }
     return best_score;
 }
@@ -87,9 +97,17 @@ int16_t evaluate(state_t *state){
     if (is_checkmated(state, BLACK)) return  INFINITY;
     if (is_checkmated(state, WHITE)) return -INFINITY;
     int16_t score = 0;
+    uint8_t num_whites = 0;
+    uint8_t num_blacks = 0;
+    int8_t white_king_position[2]; //positions are signed as subtracted later
+    int8_t black_king_position[2];
     //material
     for (uint8_t i = 0; i < 8; i++){
         for (uint8_t j = 0; j < 8; j++){
+            //just count black and white pieces whilst here
+            if (state->pieces[i][j] > 0) num_whites++;
+            else if (state->pieces[i][j] < 0) num_blacks++;
+            //evaluate material
             switch (state->pieces[i][j]){
                 case  PAWN:   score += PAWN_VAL;   break;
                 case  ROOK:   score += ROOK_VAL;   break;
@@ -102,14 +120,37 @@ int16_t evaluate(state_t *state){
                 case -KNIGHT: score -= KNIGHT_VAL; break;
                 case -BISHOP: score -= BISHOP_VAL; break;
                 case -QUEEN:  score -= QUEEN_VAL;  break;
+
+                case KING:
+                    white_king_position[0] = i;
+                    white_king_position[1] = j;
+                    break;
+                case -KING:
+                    black_king_position[0] = i;
+                    black_king_position[1] = j;
+                    break;
             }
         }
     }
-    //centre squares
-    for (uint8_t i = 0; i < 4; i ++)
-    score += state->pieces[centre_squares[i][0]][centre_squares[i][1]] > 0 ? CENTRE_POWER : \
-             state->pieces[centre_squares[i][0]][centre_squares[i][1]] < 0 ? -CENTRE_POWER : 0;
+    //if early game
+    if (num_whites + num_blacks > EARLY_GAME_PIECE_THRESH){
+        //centre squares
+        for (uint8_t i = 0; i < 4; i ++)
+        score += state->pieces[centre_squares[i][0]][centre_squares[i][1]] > 0 ? CENTRE_POWER : \
+                 state->pieces[centre_squares[i][0]][centre_squares[i][1]] < 0 ? -CENTRE_POWER : 0;
 
+        //king positions - better at edges
+        score += CENTRE_DIST(white_king_position[0]) * KING_POS_POWER;
+        score += CENTRE_DIST(white_king_position[1]) * KING_POS_POWER;
+        score -= CENTRE_DIST(black_king_position[0]) * KING_POS_POWER;
+        score -= CENTRE_DIST(black_king_position[1]) * KING_POS_POWER;
+    } else { //late game
+        //king positions - better at centre
+        score -= CENTRE_DIST(white_king_position[0]) * KING_POS_POWER;
+        score -= CENTRE_DIST(white_king_position[1]) * KING_POS_POWER;
+        score += CENTRE_DIST(black_king_position[0]) * KING_POS_POWER;
+        score += CENTRE_DIST(black_king_position[1]) * KING_POS_POWER;
+    }
     return score;
 }
 
@@ -165,7 +206,6 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array){
     //returns the number of moves added to the array,
     //if moves_array is NULL, will just return the number of moves
     uint8_t num_moves = 0;
-    int8_t cc,rr;
     for (uint8_t r = 0; r < 8; r++){
         for (uint8_t c = 0; c < 8; c++){
             //if piece from desired side...
@@ -173,58 +213,43 @@ uint8_t generate_moves(state_t *state, int8_t side, move_t *moves_array){
             switch (ABS(state->pieces[r][c])){
                 case PAWN:
                     if (ON_BOARD(r+side,c)&&IS_EMPTY(r+side,c)){
-                        CALL_ADD_MOVE(r+side,c,r+side==BACK_ROW(side),0,0);
-                        if(r==(side==WHITE?1:6)&&IS_EMPTY(r+2*side,c)) //double move
-                        CALL_ADD_MOVE(r+2*side,c,0,0,0);
+                        CALL_ADD_MOVE(r+side,c,r+side==BACK_ROW(-side));
+                        if (IS_PAWN_ROW(r,side)&&IS_EMPTY(r+2*side,c)) //double move
+                        CALL_ADD_MOVE(r+2*side,c,0);
                     }
-                    if (ON_BOARD(r+side,c+1)&&IS_THEIRS(r+side,c+1)) CALL_ADD_MOVE(r+side,c+1,r+side==BACK_ROW(side),0,0);
-                    if (ON_BOARD(r+side,c-1)&&IS_THEIRS(r+side,c-1)) CALL_ADD_MOVE(r+side,c-1,r+side==BACK_ROW(side),0,0);
+                    if (ON_BOARD(r+side,c+1)&&IS_THEIRS(r+side,c+1)) CALL_ADD_MOVE(r+side,c+1,r+side==BACK_ROW(-side));
+                    if (ON_BOARD(r+side,c-1)&&IS_THEIRS(r+side,c-1)) CALL_ADD_MOVE(r+side,c-1,r+side==BACK_ROW(-side));
                     break;
+                //sliding pieces use really hacky macros to keep code length down :/
+                //see core.h to understand them (esp. MOVES_SLIDING_PIECE :))
                 case QUEEN:
                 case ROOK:
-                    if (c<7) for (int8_t cc = c+1; cc <  8; cc++){ MOVES_SLIDING_PIECE(r, cc, DOES_BREAK_CASTLE) }
-                    if (c>0) for (int8_t cc = c-1; cc >= 0; cc--){ MOVES_SLIDING_PIECE(r, cc, DOES_BREAK_CASTLE) }
-                    if (r<7) for (int8_t rr = r+1; rr <  8; rr++){ MOVES_SLIDING_PIECE(rr, c, DOES_BREAK_CASTLE) }
-                    if (r>0) for (int8_t rr = r-1; rr >= 0; rr--){ MOVES_SLIDING_PIECE(rr, c, DOES_BREAK_CASTLE) }
+                    if (c<7) for (int8_t cc = c+1; cc <  8; cc++){ MOVES_SLIDING_PIECE(r, cc) }
+                    if (c>0) for (int8_t cc = c-1; cc >= 0; cc--){ MOVES_SLIDING_PIECE(r, cc) }
+                    if (r<7) for (int8_t rr = r+1; rr <  8; rr++){ MOVES_SLIDING_PIECE(rr, c) }
+                    if (r>0) for (int8_t rr = r-1; rr >= 0; rr--){ MOVES_SLIDING_PIECE(rr, c) }
                     if (ABS(state->pieces[r][c]) == ROOK) break; //fall through if queen...
                 case BISHOP:
-                    for (int8_t d=1; d<=MIN(7-r,7-c); d++){ MOVES_SLIDING_PIECE(r+d,c+d,0) };
-                    for (int8_t d=1; d<=MIN(7-r,  c); d++){ MOVES_SLIDING_PIECE(r+d,c-d,0) };
-                    for (int8_t d=1; d<=MIN(  r,7-c); d++){ MOVES_SLIDING_PIECE(r-d,c+d,0) };
-                    for (int8_t d=1; d<=MIN(  r,  c); d++){ MOVES_SLIDING_PIECE(r-d,c-d,0) };
+                    for (int8_t d=1; d<=MIN(7-r,7-c); d++){ MOVES_SLIDING_PIECE(r+d,c+d) };
+                    for (int8_t d=1; d<=MIN(7-r,  c); d++){ MOVES_SLIDING_PIECE(r+d,c-d) };
+                    for (int8_t d=1; d<=MIN(  r,7-c); d++){ MOVES_SLIDING_PIECE(r-d,c+d) };
+                    for (int8_t d=1; d<=MIN(  r,  c); d++){ MOVES_SLIDING_PIECE(r-d,c-d) };
                     break;
                 case KNIGHT:
                     for (uint8_t i = 0; i < 8; i++){
-                        if (ON_BOARD(r+horse_moves[i][0],c+horse_moves[i][1]) && 
+                        if (ON_BOARD(r+horse_moves[i][0],c+horse_moves[i][1]) &&
                             side*state->pieces[r+horse_moves[i][0]][c+horse_moves[i][1]] <= 0)
-                        CALL_ADD_MOVE(r+horse_moves[i][0],c+horse_moves[i][1],0,0,0);
+                        CALL_ADD_MOVE(r+horse_moves[i][0],c+horse_moves[i][1],0);
                     } break;
                 case KING:
                     for (uint8_t i = 0; i < 8; i++){
                         if (ON_BOARD(r+king_moves[i][0],c+king_moves[i][1]) &&
                             side*state->pieces[r+king_moves[i][0]][c+king_moves[i][1]] <= 0)
-                        //only says that this makes a castle invalid if is currently valid
-                        CALL_ADD_MOVE(r+king_moves[i][0],c+king_moves[i][1],0,0,
-                                      !GET_BIT(state->invalid_castles,KINGSIDE_BIT(side)));
-                        //TODO: ^broken!
+                        CALL_ADD_MOVE(r+king_moves[i][0],c+king_moves[i][1],0);
                     }
-                    //castling //TODO: \/ broken!
-                    /*
-                    if (IS_EMPTY(BACK_ROW(side),5)&&IS_EMPTY(BACK_ROW(side),6)&&\
-                        state->pieces[BACK_ROW(side)][7]==side*ROOK&&\
-                        !GET_BIT(state->invalid_castles,KINGSIDE_BIT(side)))
-                    CALL_ADD_MOVE(r,c+2,0,KINGSIDE,1);
-
-                    if (IS_EMPTY(BACK_ROW(side),1)&&IS_EMPTY(BACK_ROW(side),2)&&IS_EMPTY(BACK_ROW(side),3)&&\
-                        state->pieces[BACK_ROW(side)][0]==side*ROOK&&\
-                        !GET_BIT(state->invalid_castles,QUEENSIDE_BIT(side)))
-                    CALL_ADD_MOVE(r,c-2,0,QUEENSIDE,1);
-                    */
-
             }
         }
     }
-
     return num_moves;
 }
 
