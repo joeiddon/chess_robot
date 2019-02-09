@@ -1,0 +1,139 @@
+------------------
+7|r|n|b|q|k|b|n|r|
+------------------
+6|p|p|p|p|p|p|p|p|
+------------------
+5| | | | | | | | |
+------------------
+4| | | | | | | | |
+------------------
+3| | | | | | | | |
+------------------
+2| | | | | | | | |
+------------------
+1|P|P|P|P|P|P|P|P|
+------------------
+0|R|N|B|Q|K|B|N|R|
+------------------
+ |0|1|2|3|4|5|6|7|
+------------------
+evaluation for white is: 0
+end_time_s: 57533
+abortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortyour move is valid
+move [1,2] => [2,2], takes:  , pawn promote? 0
+------------------
+7|r|n|b|q|k|b|n|r|
+------------------
+6|p|p|p|p|p|p|p|p|
+------------------
+5| | | | | | | | |
+------------------
+4| | | | | | | | |
+------------------
+3| | | | | | | | |
+------------------
+2| | |P| | | | | |
+------------------
+1|P|P| |P|P|P|P|P|
+------------------
+0|R|N|B|Q|K|B|N|R|
+------------------
+ |0|1|2|3|4|5|6|7|
+------------------
+evaluation for white is: 0
+end_time_s: 57537
+abortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortcomputer plays:
+move [7,6] => [5,5], takes:  , pawn promote? 0
+------------------
+7|r|n|b|q|k|b| |r|
+------------------
+6|p|p|p|p|p|p|p|p|
+------------------
+5| | | | | |n| | |
+------------------
+4| | | | | | | | |
+------------------
+3| | | | | | | | |
+------------------
+2| | |P| | | | | |
+------------------
+1|P|P| |P|P|P|P|P|
+------------------
+0|R|N|B|Q|K|B|N|R|
+------------------
+ |0|1|2|3|4|5|6|7|
+------------------
+evaluation for white is: 0
+end_time_s: 57541
+abortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortyour move is valid
+move [1,3] => [3,3], takes:  , pawn promote? 0
+------------------
+7|r|n|b|q|k|b| |r|
+------------------
+6|p|p|p|p|p|p|p|p|
+------------------
+5| | | | | |n| | |
+------------------
+4| | | | | | | | |
+------------------
+3| | | |P| | | | |
+------------------
+2| | |P| | | | | |
+------------------
+1|P|P| | |P|P|P|P|
+------------------
+0|R|N|B|Q|K|B|N|R|
+------------------
+ |0|1|2|3|4|5|6|7|
+------------------
+evaluation for white is: 40
+end_time_s: 57545
+abortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortcomputer plays:
+move [7,1] => [5,2], takes:  , pawn promote? 0
+------------------
+7|r| |b|q|k|b| |r|
+------------------
+6|p|p|p|p|p|p|p|p|
+------------------
+5| | |n| | |n| | |
+------------------
+4| | | | | | | | |
+------------------
+3| | | |P| | | | |
+------------------
+2| | |P| | | | | |
+------------------
+1|P|P| | |P|P|P|P|
+------------------
+0|R|N|B|Q|K|B|N|R|
+------------------
+ |0|1|2|3|4|5|6|7|
+------------------
+evaluation for white is: 40
+end_time_s: 57549
+abortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortyour move is valid
+move [1,4] => [3,4], takes:  , pawn promote? 0
+------------------
+7|r| |b|q|k|b| |r|
+------------------
+6|p|p|p|p|p|p|p|p|
+------------------
+5| | |n| | |n| | |
+------------------
+4| | | | | | | | |
+------------------
+3| | | |P|P| | | |
+------------------
+2| | |P| | | | | |
+------------------
+1|P|P| | | |P|P|P|
+------------------
+0|R|N|B|Q|K|B|N|R|
+------------------
+ |0|1|2|3|4|5|6|7|
+------------------
+evaluation for white is: 80
+end_time_s: 57553
+abortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortabortcomputer plays:
+move [5,5] => [3,4], takes: P, pawn promote? 0
+----------

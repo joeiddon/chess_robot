@@ -7,6 +7,7 @@
 
 void print_state(state_t *state);
 void print_move(move_t* move);
+uint16_t get_time_s();
 void make_move(state_t *state, move_t *move);
 void inverse_move(state_t *state, move_t *move);
 move_t get_user_move_instance(state_t *state, uint8_t fr, uint8_t fc, uint8_t tr, uint8_t tc);

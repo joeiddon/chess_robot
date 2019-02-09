@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 
 #include "common.h"
 #include "helpers.h"
@@ -31,6 +32,12 @@ void print_move(move_t *move){
       move->from[0], move->from[1], move->to[0], move->to[1], \
       move->piece_taken>0?CHANGE_CASE(piece_chars[move->piece_taken]):piece_chars[-move->piece_taken], \
       move->is_pawn_promotion);
+}
+
+uint16_t get_time_s(){
+    struct timespec cur_time; //*.tv_sec stands for "time value [in] seconds"
+    clock_gettime(CLOCK_REALTIME, &cur_time);
+    return cur_time.tv_sec;
 }
 
 void make_move(state_t *state, move_t *move){

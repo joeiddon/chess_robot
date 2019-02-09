@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <time.h>
 
 #include "common.h"
 #include "core.h"
@@ -13,20 +12,24 @@ const int8_t king_moves[8][2] = {{0,1},{0,-1},{1,0},{-1,0},{1,1},{-1,1},{1,-1},{
 //advantage given to occupation of these in evaluate
 const uint8_t centre_squares[4][2] = {{3,3},{3,4},{4,3},{4,4}};
 
+//when to end negamax search? (global to save making copies and passing about)
+uint16_t end_time_s;
+
 move_t deepening_search(state_t *state, int8_t side, uint8_t time_limit_s){
     //implements iterative deepening whilst the time taken is less than the time_limit_s (seconds)
-    struct timespec start_time, cur_time; //*.tv_sec stands for "time value [in] seconds"
-    clock_gettime(CLOCK_REALTIME, &start_time);
-    clock_gettime(CLOCK_REALTIME, &cur_time);
-    move_t best_move;
+    uint16_t cur_time_s = get_time_s();
+    end_time_s = cur_time_s + time_limit_s;
+    printf("end_time_s: %d\n", end_time_s);
+    move_t best_move, temp_best_move;
     uint8_t depth = 0;
-    while (cur_time.tv_sec - start_time.tv_sec < time_limit_s){
+    while (cur_time_s < end_time_s){
         //can get stuck doing a negamax call, so should pass a start time down the chain
         //and then each call can check that it is within time
         //printf("time to search to depth: %d\n", depth);
-        int16_t s = negamax(state, &best_move, side, ++depth, -INFINITY, INFINITY);
-        if (s == -side*INFINITY) break;
-        clock_gettime(CLOCK_REALTIME, &cur_time);
+        best_move = temp_best_move;
+        int16_t s = negamax(state, &temp_best_move, side, ++depth, -INFINITY, INFINITY);
+        if (ABS(s) == INFINITY) break;
+        cur_time_s = get_time_s();
     }
     //printf("thought to depth: %d\n", depth);
     return best_move;
@@ -41,23 +44,19 @@ int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, i
     state_t state_backup;
     copy_state(state, &state_backup);
     #endif
+    if (depth > 2 && end_time_s <= get_time_s()){
+        printf("abort");
+        return 0;
+    }
     if (depth == 0) return side*evaluate(state);
     int16_t best_score = -INFINITY;
     move_t moves[MAX_NUM_MOVES];
     uint8_t num_moves = generate_moves(state, side, moves);
-    if (num_moves == 0) return side*INFINITY;
+    if (num_moves == 0) return INFINITY;
     uint8_t move_order[MAX_NUM_MOVES]; //array of indicies
     order_moves(moves, num_moves, move_order);
     for (uint8_t i = 0; i < num_moves; i++){
         make_move(state, moves+move_order[i]); //pointer addition! - same as &moves[...]
-        /*
-        if (is_checkmated(state, -side)){
-            printf("checkmating move found, returning\n");
-            inverse_move(state, moves+move_order[i]);
-            if (best_move != NULL) *best_move = moves[move_order[i]];
-            return INFINITY * side;
-        }
-        */
         int16_t score = -negamax(state,
                                  NULL,
                                  -side,

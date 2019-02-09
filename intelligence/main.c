@@ -16,14 +16,14 @@ state_t state = {{{ ROOK,  KNIGHT,  BISHOP,  QUEEN,  KING,  BISHOP,  KNIGHT,  RO
                   {    0,       0,       0,      0,     0,       0,       0,     0},
                   {-PAWN,   -PAWN,   -PAWN,  -PAWN, -PAWN,   -PAWN,   -PAWN, -PAWN},
                   {-ROOK, -KNIGHT, -BISHOP, -QUEEN, -KING, -BISHOP, -KNIGHT, -ROOK}}};
-/*
+                  /*
 state_t state = {{{    0,       0,       0,      0,     0,  KING,       0,     0},
                   {    0,       0,       0,      0,     0,       0,       0,    0},
                   {    0,       0,       0,      0,     0,       0,       0,    0},
                   {    0,       0,       0,      0,     0,       0,       0,     0},
                   {    0,       0,       0,      0,     0,       0,       0,     0},
                   {    0,       0,       0,      0,     0,       0,       0,     0},
-                  {    0,       0,    PAWN,      0,     0,       0,       0,     0},
+                  { PAWN,       0,    PAWN,      0,     0,       0,       0,     0},
                   //{    0,       0,       0,      0, -KING,       0,       0,     0}}};
                   //{    0, KNIGHT, -BISHOP, -QUEEN, -KING, -BISHOP, -KNIGHT, -ROOK}}};
                   {    0,       0,       0,      0, -KING,       0,       0,     0}}};
@@ -107,20 +107,21 @@ void main(int argc, char** argv){
                 printf("that move is invalid!\n");
                 continue;
             }
+#define THINK_TIME_S 4
             /*
-            move_t user_move = deepening_search(&state, WHITE, 1);
+            move_t user_move = deepening_search(&state, WHITE, THINK_TIME_S);
             //memcpy(&user_move, valid_user_moves, sizeof(move_t));
             */
             printf("your move is valid\n");
             make_move(&state, &user_move);
+            print_move(&user_move);
+            print_state(&state);
             if (is_checkmated(&state,BLACK)){
                 printf("black checkmated\n");
                 return;
             }
-            print_move(&user_move);
-            print_state(&state);
             printf("evaluation for white is: %d\n", evaluate(&state));
-            move_t comp_move = deepening_search(&state, BLACK, 1);
+            move_t comp_move = deepening_search(&state, BLACK, THINK_TIME_S);
             //print_negamax_route(&state, &comp_move, BLACK, 3);
             make_move(&state, &comp_move);
             printf("computer plays:\n");
