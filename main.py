@@ -30,11 +30,11 @@ POT_Z_ABOVE = 170
 POT_Z_IN = 80
 
 #timing, in seconds
-SETTLE_TIME = 0.9 #time for servos to move and settle
-GRAB_TIME   = 0.5 #time for grabber to open/close
+SETTLE_TIME = 0.4 #time for servos to move and settle
+GRAB_TIME   = 0.4 #time for grabber to open/close
 
 #how long does the computer have to think (in seconds)
-THOUGHT_TIME = 1
+THOUGHT_TIME = 4
 
 def get_serial_port():
     ser_ports = glob.glob('/dev/ttyUSB*')
@@ -134,7 +134,20 @@ def display_state():
 
 def make_move(move):
     '''makes a move to the state and maybe black_pieces/white_pieces'''
-    state[move[1][0]][move[1][1]] = state[move[0][0]][move[0][1]]
+    #only need to update recognition board state (black_pieces and white_pieces)
+    #if it is a *take*
+    global black_pieces
+    if state[move[1][0]][move[1][1]]:
+        if state[move[0][0]][move[0][1]].isupper(): #if moving a white piece
+            black_pieces[move[1][0]][move[1][1]] = 0
+        else:
+            pass #not implementing for black takes as of now as shouldn't matter
+    #update state
+    if move[1][0] == 0 and state[move[0][0]][move[0][1]] == 'p':
+        #if black pawn promote, handle acordingly
+        state[move[1][0]][move[1][1]] = 'q'
+    else:
+        state[move[1][0]][move[1][1]] = state[move[0][0]][move[0][1]]
     state[move[0][0]][move[0][1]] = ' '
 
 def get_user_move(last_whites, last_blacks):
@@ -142,8 +155,8 @@ def get_user_move(last_whites, last_blacks):
     global white_pieces, black_pieces
     this_whites, this_blacks = recognition.recognise(0)
     #last condition required for when white takes
-    move_from = last_blacks & ~this_blacks & ~this_whites
-    move_to   = this_blacks & ~last_blacks  ###this needs fixing for when black takes a white piece!
+    move_from = last_blacks & ~this_blacks# & ~this_whites
+    move_to   = this_blacks & ~last_blacks
     if np.sum(move_from) + np.sum(move_to) != 2:
         print('move from', move_from)
         print('move to', move_to)
