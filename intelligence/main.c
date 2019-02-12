@@ -37,6 +37,7 @@ void main(int argc, char** argv){
      * The format for the command line arguments is decribed below in the
      * "cmd-line make-one-move" section. In this mode, a board state (and other info)
      * is parsed, and the program writes to stdout the best move it can come up with.
+     * Or, if a different type is sent, it will return some info.
      *
      * In the terminal-based game mode, ingo (e.g. the current state of the board) and
      * prompts are written to stdout, allowing one to play a game in the terminal.
@@ -46,31 +47,71 @@ void main(int argc, char** argv){
      * now]) and specific things need testing.
      */
 
-    if (argc == 4){
+    if (argc > 1){
 
-        ///////////////////////CMD LINE MAKE-ONE-MOVE///////////////////////////////////////////
+        ///////////////////////CMD-LINE MAKE-ONE-MOVE///////////////////////////////////////////
 
         //begin code for cmd line make-one-move mode
-        //protocol is to pass in three arguments:
-        //  - side: "white" or "black"
-        //  - time limit in seconds, represented as one charater code
-        //  - board state: a 64 character string of piece chars (upper is white, lower is black)
-        // returns best move in format fromrow,fromcol,torow,tocol
+        /* ---Interface---
+         *
+         * The first argument is the board:
+         *   - board state: a 64 character string of piece chars (upper is white, lower is black).
+         * The second argument indicates the side:
+         *   - side: "white" or "black".
+         * The third argument is the type of request:
+         *   - type: "eval" or "move".
+         *
+         * If the type is "eval", then no further arguments are required.
+         * In this case, three values are returned:
+         *      - checkmate status: is "side" checkmated ? 1 or 0;
+         *      - evaluation of state: what is returned form evaluate(...);
+         *      - available moves: a 3d JSON array of legal moves for "side".
+         *
+         * If the type is "move", then a further fourth argument is required:
+         *   - thinking time limit in seconds: represented as one charater code
+         * In this case, a single JSON array is returned representing the
+         * best move for "side".
+         *
+An example "eval" request:
+$ ./chess_ai "RNBQKBNRPPPPPPPP                                pppppppprnbqkbnr" white eval
+0 0 [[[0,1],[2,2]],[[0,1],[2,0]],[[0,6],[2,7]],[[0,6],[2,5]],[[1,0],[2,0]],[[1,0],[3,0]],[[1,1],[2,1]],[[1,1],[3,1]],[[1,2],[2,2]],[[1,2],[3,2]],[[1,3],[2,3]],[[1,3],[3,3]],[[1,4],[2,4]],[[1,4],[3,4]],[[1,5],[2,5]],[[1,5],[3,5]],[[1,6],[2,6]],[[1,6],[3,6]],[[1,7],[2,7 ]],[[1,7],[3,7]]]
+         */
         static char piece_chars[7] = {' ','p','r','n','b','q','k'};
-        int8_t side = !strcmp(argv[1], "white") ? WHITE : BLACK;
-        uint8_t time_limit_s = argv[2][0];
+        //process board state string
         for (uint8_t i = 0; i < 64; i++){
             for (uint8_t j = 0; j < 7; j++){
-                if ((IS_LOWER(argv[3][i]) ? argv[3][i] : CHANGE_CASE(argv[3][i])) == piece_chars[j]){
-                    state.pieces[i/8][i%8] = j * (IS_LOWER(argv[3][i]) ? -1 : 1);
+                if ((IS_LOWER(argv[1][i]) ? argv[1][i] : CHANGE_CASE(argv[1][i])) == piece_chars[j]){
+                    state.pieces[i/8][i%8] = j * (IS_LOWER(argv[1][i]) ? -1 : 1);
                 }
             }
         }
-        //printf("side: %d, time_limit: %d\n", side, time_limit);
-        //print_state(&state);
-        move_t best_move = deepening_search(&state, side, time_limit_s);
-        printf("%d,%d,%d,%d\n", \
-        best_move.from[0], best_move.from[1], best_move.to[0], best_move.to[1]);
+        //process "side" argument
+        int8_t side = !strcmp(argv[2], "white") ? WHITE : BLACK;
+        //process request type
+        if (!strcmp(argv[3], "eval")){ //evaluate
+            printf("%s ", is_checkmated(&state, side) ? "1" : "0");
+            printf("%d ", evaluate(&state));
+            move_t moves[MAX_NUM_MOVES];
+            uint8_t num_moves;
+            num_moves = generate_moves(&state, side, moves);
+            printf("[");
+            for (uint8_t i = 0; i < num_moves; i++){
+                printf("[[%d,%d],[%d,%d]]", moves[i].from[0],
+                                            moves[i].from[1],
+                                            moves[i].to[0],
+                                            moves[i].to[1]);
+                if (i != num_moves-1) printf(",");
+            }
+            printf("]\n");
+        } else { //find best move
+            uint8_t time_limit_s = argv[4][0];
+            printf("time_limit_s: %d\n", time_limit_s);
+            move_t best_move = deepening_search(&state, side, time_limit_s);
+            printf("[[%d,%d],[%d,%d]]\n", best_move.from[0],
+                                          best_move.from[1],
+                                          best_move.to[0],
+                                          best_move.to[1]);
+        }
 
     } else {
 
