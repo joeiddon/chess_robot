@@ -19,13 +19,14 @@ move_t deepening_search(state_t *state, int8_t side, uint8_t time_limit_s){
     //implements iterative deepening whilst the time taken is less than the time_limit_s (seconds)
     uint16_t cur_time_s = get_time_s();
     end_time_s = cur_time_s + time_limit_s;
-    printf("end_time_s: %d\n", end_time_s);
     move_t best_move, temp_best_move;
     uint8_t depth = 0;
     while (cur_time_s < end_time_s){
-        //can get stuck doing a negamax call, so should pass a start time down the chain
-        //and then each call can check that it is within time
+        //printf("depth %d, best move: ", depth);
+        //print_move(&best_move);
         //printf("time to search to depth: %d\n", depth);
+        //we only update the best move with the temp move if the previously call
+        //finished in time and didn't have to abort
         best_move = temp_best_move;
         int16_t s = negamax(state, &temp_best_move, side, ++depth, -INFINITY, INFINITY);
         if (ABS(s) == INFINITY) break;
@@ -45,7 +46,7 @@ int16_t negamax(state_t *state, move_t *best_move, int8_t side, uint8_t depth, i
     copy_state(state, &state_backup);
     #endif
     if (depth > 2 && end_time_s <= get_time_s()){
-        printf("abort");
+        //printf("abort");
         return 0;
     }
     if (depth == 0) return side*evaluate(state);

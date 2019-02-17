@@ -75,6 +75,8 @@ void main(int argc, char** argv){
 An example "eval" request:
 $ ./chess_ai "RNBQKBNRPPPPPPPP                                pppppppprnbqkbnr" white eval
 0 0 [[[0,1],[2,2]],[[0,1],[2,0]],[[0,6],[2,7]],[[0,6],[2,5]],[[1,0],[2,0]],[[1,0],[3,0]],[[1,1],[2,1]],[[1,1],[3,1]],[[1,2],[2,2]],[[1,2],[3,2]],[[1,3],[2,3]],[[1,3],[3,3]],[[1,4],[2,4]],[[1,4],[3,4]],[[1,5],[2,5]],[[1,5],[3,5]],[[1,6],[2,6]],[[1,6],[3,6]],[[1,7],[2,7 ]],[[1,7],[3,7]]]
+An example "move" request:
+$ ./chess_ai "RNBQKBNRPPPPPPPP                                pppppppprnbqkbnr" white move 9
          */
         static char piece_chars[7] = {' ','p','r','n','b','q','k'};
         //process board state string
@@ -104,8 +106,7 @@ $ ./chess_ai "RNBQKBNRPPPPPPPP                                pppppppprnbqkbnr" 
             }
             printf("]\n");
         } else { //find best move
-            uint8_t time_limit_s = argv[4][0];
-            printf("time_limit_s: %d\n", time_limit_s);
+            uint8_t time_limit_s = str_to_int(argv[4]);
             move_t best_move = deepening_search(&state, side, time_limit_s);
             printf("[[%d,%d],[%d,%d]]\n", best_move.from[0],
                                           best_move.from[1],
@@ -148,12 +149,12 @@ $ ./chess_ai "RNBQKBNRPPPPPPPP                                pppppppprnbqkbnr" 
                 printf("that move is invalid!\n");
                 continue;
             }
-#define THINK_TIME_S 4
+            printf("your move is valid\n");
+#define THINK_TIME_S 3
             /*
             move_t user_move = deepening_search(&state, WHITE, THINK_TIME_S);
             //memcpy(&user_move, valid_user_moves, sizeof(move_t));
             */
-            printf("your move is valid\n");
             make_move(&state, &user_move);
             print_move(&user_move);
             print_state(&state);

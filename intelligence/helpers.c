@@ -40,6 +40,24 @@ uint16_t get_time_s(){
     return cur_time.tv_sec;
 }
 
+uint16_t str_to_int(uint8_t *string){
+    //v. hacky :)
+    uint16_t integer = 0;
+    uint8_t len = 1;
+    uint16_t mul = 1;
+    while (string[len] != 0){
+        len++;
+        mul *= 10;
+    }
+    uint8_t *p = string;
+    while (*p != 0){
+        integer += (*p-48) * mul;
+        p++;
+        mul /= 10;
+    }
+    return integer;
+}
+
 void make_move(state_t *state, move_t *move){
     //note: does not insure move is legal
     int8_t side = state->pieces[MOVE_FROM] > 0 ? WHITE : BLACK;
