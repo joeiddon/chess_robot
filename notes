@@ -10,3 +10,8 @@ chess ai written in C
 servo offsets are key if arm not quite getting to where supposed to :)
 working to level where I can play it now - lot's needs improving though
 changed serial protocol to send number of bytes first instead of a terminal 0xff byte
+coming back to rpi - very close to finishing
+the AI works well now with proper time limits and checkmate ability
+improved its cmd-line interface to query board info like checkmates
+played a full 20 minute game; played really well all the way to the end, but couldn't checkmate due to bug
+fixed bug; going to play a full game from start to finish (with hopefully a checkmate) tomorrow

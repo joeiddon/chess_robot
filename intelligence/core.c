@@ -29,7 +29,7 @@ move_t deepening_search(state_t *state, int8_t side, uint8_t time_limit_s){
         //finished in time and didn't have to abort
         best_move = temp_best_move;
         int16_t s = negamax(state, &temp_best_move, side, ++depth, -INFINITY, INFINITY);
-        if (ABS(s) == INFINITY) break;
+        if (ABS(s) == INFINITY) return temp_best_move;
         cur_time_s = get_time_s();
     }
     //printf("thought to depth: %d\n", depth);

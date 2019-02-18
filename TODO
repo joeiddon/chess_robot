@@ -6,6 +6,5 @@ redesign connecting triangle
 add images of dimensions, electronics etc.
 explain history of project in README
 print chess set
-auto disable motors after set time limit
 add titles to all files in nice /****/ notation
-"Joe's Serial Protocol" needs re-visiting as `255` sometimes needed to be sent (and that is end byte)
+widen the open gripper position for better repeatability

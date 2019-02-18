@@ -1,9 +1,11 @@
 #built-in libraries
-import glob, time, subprocess, warnings
+import glob, time, subprocess, warnings, ast
 #numpy
 import numpy as np
 #my libraries
 import arm_lib, recognition
+
+print('libraries loaded successfully')
 
 #turm off picamera warnings...
 warnings.simplefilter('ignore')
@@ -12,7 +14,7 @@ warnings.simplefilter('ignore')
 #note sides are to centres of edge pieces
 X_LEFT  =  14
 X_RIGHT = 260 + X_LEFT
-Y_CLOSE = 195
+Y_CLOSE = 190
 Y_FAR   = 431
 Z_PIECE =  35
 Z_ABOVE = 100
@@ -34,7 +36,7 @@ SETTLE_TIME = 0.4 #time for servos to move and settle
 GRAB_TIME   = 0.4 #time for grabber to open/close
 
 #how long does the computer have to think (in seconds)
-THOUGHT_TIME = 4
+THOUGHT_TIME = 3
 
 def get_serial_port():
     ser_ports = glob.glob('/dev/ttyUSB*')
@@ -50,14 +52,22 @@ def get_piece_coordinate(x,y):
 def calibrate():
     '''servos need a bit of 'warming up', so a little calibration routine'''
     #should have added more move calls here, but only hacky for now
-    for p in [[7,0],[7,7]]:
-        print(*get_piece_coordinate(*p), MOVE_POS[2])
+    for p in [[0,0],[0,7],[7,7],[7,0]]:
+        #print(*get_piece_coordinate(*p), MOVE_POS[2])
         arm.move_to(*get_piece_coordinate(*p), MOVE_POS[2])
         time.sleep(SETTLE_TIME)
         arm.block_till_reach_target()
         arm.move_to(*MOVE_POS)
         time.sleep(SETTLE_TIME)
         arm.block_till_reach_target()
+        time.sleep(0.5)
+
+def tune_arm():
+    '''moves piece on first column sequentially up, then down, the rows'''
+    for r in range(7):
+        move_piece((0,r),(0,r+1))
+    for r in range(7,0,-1):
+        move_piece((0,r),(0,r-1))
 
 def move_piece(c1, c2):
     '''moves piece from c1 -> c2, note coords in x,y NOT r,c format'''
@@ -125,7 +135,6 @@ def take_piece(c):
     arm.move_to(*REST_POS)              #move to rest pos
     time.sleep(SETTLE_TIME)
 
-
 def display_state():
     print('-'*10)
     for i,r in enumerate(state[::-1]):
@@ -141,42 +150,63 @@ def make_move(move):
         if state[move[0][0]][move[0][1]].isupper(): #if moving a white piece
             black_pieces[move[1][0]][move[1][1]] = 0
         else:
-            pass #not implementing for black takes as of now as shouldn't matter
+            #not implementing for black takes as of now as we don't ever recognise() for white
+            pass
     #update state
-    if move[1][0] == 0 and state[move[0][0]][move[0][1]] == 'p':
-        #if black pawn promote, handle acordingly
-        state[move[1][0]][move[1][1]] = 'q'
+    #special case: pawn promotes
+    if move[1][0] in (0,7) and state[move[0][0]][move[0][1]].lower() == 'p':
+        state[move[1][0]][move[1][1]] = 'q' if state[move[0][0]][move[0][1]] == 'p' else 'Q'
     else:
         state[move[1][0]][move[1][1]] = state[move[0][0]][move[0][1]]
     state[move[0][0]][move[0][1]] = ' '
 
-def get_user_move(last_whites, last_blacks):
+def get_user_move():
     #user is assumed to play as black [for now]
-    global white_pieces, black_pieces
-    this_whites, this_blacks = recognition.recognise(0)
-    #last condition required for when white takes
-    move_from = last_blacks & ~this_blacks# & ~this_whites
-    move_to   = this_blacks & ~last_blacks
-    if np.sum(move_from) + np.sum(move_to) != 2:
-        print('move from', move_from)
-        print('move to', move_to)
-        raise Exception('wrong number of pieces changed')
-    else:
-        white_pieces = this_whites
-        black_pieces = this_blacks
-    return [[b[0] for b in np.where(a)] for a in [move_from, move_to]]
+    global black_pieces
+    input('hit enter when you have made a move...')
+    print('recognising board...')
+    _, new_blacks = recognition.recognise(0)
+    blacks_gone = black_pieces & ~new_blacks
+    blacks_new  = new_blacks   & ~black_pieces
+    if np.sum(blacks_gone) + np.sum(blacks_new) != 2:
+        print('board recognition error')
+        print('blacks gone')
+        print(blacks_gone)
+        print('blacks new')
+        print(blacks_new)
+        if input('show what I\'m seeing? y/n\n') == 'y': recognition.recognise(1)
+        return get_user_move() #try again
+    move = [[b[0] for b in np.where(a)] for a in [blacks_gone, blacks_new]]
+    if move not in black_info['moves']:
+        print('illegal move\nyou played:', move, 'valid moves are:', white_info['moves'])
+        return get_user_move() #try again
+    black_pieces = new_blacks
+    return move
 
 def get_comp_move():
     #computer is assumed to play as white for now
     #calls the chess_ai C program with the state
     #to get the best move for the computer
     call = subprocess.run(['intelligence/chess_ai',
+                           ''.join(''.join(r) for r in state),
                            'white',
-                           chr(THOUGHT_TIME),
-                           ''.join(''.join(r) for r in state)],
+                           'move',
+                           str(THOUGHT_TIME)],
                           stdout=subprocess.PIPE)
-    parts = [int(i) for i in call.stdout.strip().split(b',')]
-    return [parts[:2],parts[2:]]
+    return ast.literal_eval(call.stdout.decode('utf-8').strip())
+
+def get_side_info(side):
+    #returns dict of if side is checkmated and their valid moves
+    #also updates global state evaluation
+    global evaluation
+    call = subprocess.run(['intelligence/chess_ai',
+                           ''.join(''.join(r) for r in state),
+                           side,
+                           'eval'],
+                          stdout=subprocess.PIPE)
+    is_checkmated, evaluation, moves = call.stdout.decode('utf-8').strip().split()
+    return {'is_checkmated': int(is_checkmated),
+            'moves': ast.literal_eval(moves)}
 
 state = [['R','N','B','Q','K','B','N','R'],
          ['P']*8, [' ']*8, [' ']*8, [' ']*8, [' ']*8, ['p']*8,
@@ -185,54 +215,54 @@ state = [['R','N','B','Q','K','B','N','R'],
 white_pieces = np.array([[c.isupper() for c in r] for r in state], 'bool')
 black_pieces = np.array([[c.islower() for c in r] for r in state], 'bool')
 
-'''
-print(get_comp_move())
-display_state()
-make_move(get_comp_move())
-display_state()
-
-raise SystemExit
-'''
 arm = arm_lib.Arm(get_serial_port())
+
 try:
-    arm.home()
-except:
-    pass #arduino "skips a beat" occasionally so pass silently
-arm.block_till_reach_target()
-
-calibrate()
-arm.move_to(*REST_POS)
-arm.block_till_reach_target()
-
-display_state()
-comp_move = get_comp_move()
-print('computer plays: ', comp_move)
-make_move(comp_move)
-move_piece(comp_move[0][::-1], comp_move[1][::-1])
-display_state()
-arm.set_motors(0)
-
-while 1:
-    input('hit enter when you\'ve made a move...')
-    print('recognising board...')
+    print('homing arm')
     try:
-        user_move = get_user_move(white_pieces[:], black_pieces[:])
-    except:
-        print('recognition error')
-        if input('show what I\'m seeing? y/n\n') == 'y': recognition.recognise(1)
-        continue
-    print('you played: ', user_move)
-    make_move(user_move)
-    display_state()
-    comp_move = get_comp_move()
-    comp_is_take = state[comp_move[1][0]][comp_move[1][1]] != ' '
-    print('computer plays: ', comp_move)
-    make_move(comp_move)
-    display_state()
-    #must transpose for move_piece and take_piece funcs
-    if comp_is_take:
-        take_piece(comp_move[1][::-1])
-    move_piece(comp_move[0][::-1], comp_move[1][::-1])
+        arm.home()
+    except: pass #arduino "skips a beat" occasionally so pass silently
+    arm.block_till_reach_target()
+    print('arm homed')
+    if input('you want to calibrate? y/n\n') == 'y': calibrate()
     arm.move_to(*REST_POS)
     arm.block_till_reach_target()
     arm.set_motors(0)
+
+    white_info = get_side_info('white')
+    black_info = get_side_info('black')
+
+    while 1:
+        print('thinking of a move; will take ', THOUGHT_TIME, 'seconds')
+        comp_move = get_comp_move()
+        comp_is_take = state[comp_move[1][0]][comp_move[1][1]] != ' '
+        print('computer plays: ', comp_move)
+        make_move(comp_move)
+        display_state()
+        black_info = get_side_info('black')
+        if black_info['is_checkmated']:
+            print('black checkmated')
+            break
+        '''
+        #must transpose for move_piece and take_piece funcs
+        if comp_is_take:
+            take_piece(comp_move[1][::-1])
+        move_piece(comp_move[0][::-1], comp_move[1][::-1])
+        arm.move_to(*REST_POS)
+        arm.block_till_reach_target()
+        arm.set_motors(0)
+        '''
+
+        user_move = get_user_move()
+        print('you played: ', user_move)
+        make_move(user_move)
+        display_state()
+        white_info = get_side_info('white')
+        if white_info['is_checkmated']:
+            print('white checkmated!')
+            break
+except:
+    arm.home()
+    arm.block_till_reach_target()
+    arm.set_motors(0)
+    raise ##re-raise the exception

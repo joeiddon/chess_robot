@@ -16,10 +16,10 @@ def recognise(display=False):
     line_col = 255
 
     #detection thresholds
-    white_pix_thresh = 95  #threshold for pix to count as white
-    black_pix_thresh = 45  #threshold for pix to count as black
-    white_pix_no = 2      #number of white threshed pixels for piece
-    black_pix_no = 2      #number of black threshed pixels for piece
+    white_pix_thresh = 100 #threshold for pix to count as white
+    black_pix_thresh = 55  #threshold for pix to count as black
+    white_pix_no = 2 #number of white threshed pixels for piece
+    black_pix_no = 2 #number of black threshed pixels for piece
 
     #pixels of each edge of chess board
     #(hard coded because board's position must be fixed anyway for arm)
@@ -85,3 +85,6 @@ def recognise(display=False):
         plt.show()
 
     return (np.flip(white_pieces,1), np.flip(black_pieces,1))
+
+if __name__ == '__main__':
+    recognise(1)

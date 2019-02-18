@@ -23,7 +23,7 @@ state_t state = {{{    0,       0,       0,      0,     0,  KING,       0,     0
                   {    0,       0,       0,      0,     0,       0,       0,     0},
                   {    0,       0,       0,      0,     0,       0,       0,     0},
                   {    0,       0,       0,      0,     0,       0,       0,     0},
-                  { PAWN,       0,    PAWN,      0,     0,       0,       0,     0},
+                  {-ROOK,       0,   -ROOK,      0,     0,       0,       0,     0},
                   //{    0,       0,       0,      0, -KING,       0,       0,     0}}};
                   //{    0, KNIGHT, -BISHOP, -QUEEN, -KING, -BISHOP, -KNIGHT, -ROOK}}};
                   {    0,       0,       0,      0, -KING,       0,       0,     0}}};
@@ -68,7 +68,7 @@ void main(int argc, char** argv){
          *      - available moves: a 3d JSON array of legal moves for "side".
          *
          * If the type is "move", then a further fourth argument is required:
-         *   - thinking time limit in seconds: represented as one charater code
+         *   - thinking time limit in seconds
          * In this case, a single JSON array is returned representing the
          * best move for "side".
          *
