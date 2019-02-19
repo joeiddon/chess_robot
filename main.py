@@ -170,10 +170,6 @@ def get_user_move():
     blacks_new  = new_blacks   & ~black_pieces
     if np.sum(blacks_gone) + np.sum(blacks_new) != 2:
         print('board recognition error')
-        print('blacks gone')
-        print(blacks_gone)
-        print('blacks new')
-        print(blacks_new)
         if input('show what I\'m seeing? y/n\n') == 'y': recognition.recognise(1)
         return get_user_move() #try again
     move = [[b[0] for b in np.where(a)] for a in [blacks_gone, blacks_new]]
