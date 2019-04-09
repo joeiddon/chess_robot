@@ -8,3 +8,4 @@ explain history of project in README
 print chess set
 add titles to all files in nice /****/ notation
 widen the open gripper position for better repeatability
+change the RGB values in rpi_vision because they are currently too dark: just try [0.3,0.4,0.3] weightings, for instance
